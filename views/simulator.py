@@ -7,7 +7,7 @@ import streamlit as st
 
 from resilia.data import sim_slice
 from ui import charts
-from ui.i18n import T, date_long, event, num, phase, site as site_txt
+from ui.i18n import T, date_long, event, month_short, num, phase, site as site_txt
 from ui.style import chips, explain, legend, page_header, versus
 
 from .pitch import _board, _dot, _weather_words
@@ -75,6 +75,9 @@ def render(ctx):
     if ctx.event:
         with st.expander(T("O que aconteceu neste evento", "What happened in this event"), icon=":material/history_edu:"):
             st.markdown(event(ctx.ev_key, "story"))
+
+    _balance24(ctx)
+    st.markdown(f"### {T('O evento completo (72 h)', 'The full event (72 h)')}")
 
     c = st.columns(4)
     with c[0]:
@@ -160,6 +163,109 @@ def render(ctx):
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         st.caption(T("Inclui os indicadores, os resultados hora a hora das duas gestões e o clima real usado.",
                      "Includes the indicators, hourly results for both strategies and the real weather used."))
+
+
+def _day_stats(o):
+    demand = o["dC"] + o["dE"] + o["dP"] + o["pump"]
+    served = o["sC"] + o["sE"] + o["sP"] + o["pump"]
+    unmet = (demand - served).clip(lower=0)
+    # risco de interrupção = energia que faltou aos serviços essenciais (clínica, rádio, abrigo + luz e telemóvel das casas)
+    ess_need = o["dC"] + o["dEmin"]
+    ess_unmet = (o["dC"] - o["sC"]).clip(lower=0) + (o["dEmin"] - o["sE"]).clip(lower=0)
+    return dict(
+        demand=float(demand.sum()), served=float(served.sum()), unmet=float(unmet.sum()),
+        ess_unmet=float(ess_unmet.sum()), other_unmet=float(unmet.sum() - ess_unmet.sum()),
+        risk=100 * float(ess_unmet.sum()) / max(float(ess_need.sum()), 1e-9),
+        # interrupção real: clínica sem energia ou casas às escuras (abaixo de luz + telemóvel);
+        # o «modo essencial» é racionamento planeado, não conta como corte
+        hours=int(((o["sC"] < 0.98 * o["dC"]) | (o["sE"] < 0.95 * o["dEmin"])).sum()),
+        clinic=int((o["sC"] < 0.98 * o["dC"]).sum()),
+        soc_end=100 * float(o["soc"].iloc[-1]), soc_min=100 * float(o["soc"].min()),
+        pv=float(o["pv_av"].sum()), wind=float(o["wind"].sum()), diesel=float(o["diesel"].sum()),
+        bat_out=float(o["bat_dis"].sum()), bat_in=float(o["bat_ch"].sum()), curt=float(o["curt"].sum()),
+    )
+
+
+def _balance24(ctx):
+    """Resposta directa ao enunciado: equilíbrio oferta × procura ao longo de 24 horas."""
+    oc, orr = ctx.oc, ctx.orr
+    norm = orr.index.normalize()
+    days = [d for d in sorted(set(norm)) if (norm == d).sum() == 24]
+    if not days:
+        return
+
+    def main_phase(d):
+        return orr.loc[norm == d, "fase"].value_counts().idxmax()
+
+    st.markdown(f"### {T('Balanço de 24 horas', '24-hour energy balance')}")
+    st.caption(T("Como a mini-rede equilibra a oferta (sol, vento, bateria, gerador) e a procura da aldeia, hora a hora, "
+                 "durante um dia completo. Escolha o dia.",
+                 "How the mini-grid balances supply (solar, wind, battery, generator) and village demand, hour by hour, "
+                 "over one full day. Choose the day."))
+    default = next((i for i, d in enumerate(days) if main_phase(d) == "evento"), 0)
+    key = f"day24_{ctx.site_key}_{ctx.ev_key}"
+    st.session_state.setdefault(key, default)
+    sel = st.segmented_control(T("Dia", "Day"), list(range(len(days))), key=key, label_visibility="collapsed",
+                               format_func=lambda i: f"{days[i].day} {month_short(days[i].month)} · {phase(main_phase(days[i]))}")
+    sel = default if sel is None else sel
+    day = days[sel]
+    m = (norm == day)
+    a, b = oc[m], orr[m]
+    sa, sb = _day_stats(a), _day_stats(b)
+
+    c = st.columns(4)
+    with c[0]:
+        versus(T("Risco de interrupção dos serviços essenciais", "Interruption risk for essential services"),
+               f"{num(sa['risk'])}%", f"{num(sb['risk'])}%",
+               T(f"energia essencial em falta: {num(sa['ess_unmet'])} → {num(sb['ess_unmet'])} kWh",
+                 f"essential energy short: {num(sa['ess_unmet'])} → {num(sb['ess_unmet'])} kWh"))
+    with c[1]:
+        versus(T("Horas com interrupção", "Hours with interruption"), f"{sa['hours']} h", f"{sb['hours']} h",
+               T("horas com a clínica sem energia ou as casas às escuras",
+                 "hours with the clinic unpowered or homes in the dark"))
+    with c[2]:
+        versus(T("Clínica sem energia neste dia", "Clinic without power this day"), f"{sa['clinic']} h", f"{sb['clinic']} h")
+    with c[3]:
+        versus(T("Bateria no fim do dia", "Battery at end of day"), f"{num(sa['soc_end'])}%", f"{num(sb['soc_end'])}%",
+               T(f"mínimo do dia: {num(sa['soc_min'])}% → {num(sb['soc_min'])}%",
+                 f"day minimum: {num(sa['soc_min'])}% → {num(sb['soc_min'])}%"))
+
+    peak = float(max((a["dC"] + a["dE"] + a["dP"] + a["pump"]).max(), (b["dC"] + b["dE"] + b["dP"] + b["pump"]).max(),
+                     b["bat_ch"].max() / 0.6, a["bat_ch"].max() / 0.6, 1))
+    l, r = st.columns(2)
+    with l:
+        st.plotly_chart(charts.balance24(a, T("Sistema de hoje", "Today's system"), ymax=peak), width="stretch")
+    with r:
+        st.plotly_chart(charts.balance24(b, T("Com RESILIA", "With RESILIA"), ymax=peak), width="stretch")
+
+    with st.expander(T("Tabela do balanço energético do dia (kWh)", "Daily energy balance table (kWh)"),
+                     icon=":material/table_chart:", expanded=False):
+        rows = [
+            (T("Energia produzida pelo sol", "Energy produced by the sun"), "pv"),
+            (T("Energia produzida pelo vento", "Energy produced by the wind"), "wind"),
+            (T("Energia do gerador", "Energy from the generator"), "diesel"),
+            (T("Bateria entregou", "Battery delivered"), "bat_out"),
+            (T("Bateria guardou", "Battery stored"), "bat_in"),
+            (T("Sol desperdiçado (bateria cheia)", "Solar curtailed (battery full)"), "curt"),
+            (T("Procura da aldeia", "Village demand"), "demand"),
+            (T("Energia servida", "Energy served"), "served"),
+            (T("Energia não servida (total)", "Energy not served (total)"), "unmet"),
+            (T("… a serviços essenciais (interrupção)", "… to essential services (interruption)"), "ess_unmet"),
+            (T("… conforto e moagem (hoje: apagão; RESILIA: racionamento planeado)",
+               "… comfort and mill (today: blackout; RESILIA: planned rationing)"), "other_unmet"),
+        ]
+        st.table(pd.DataFrame({T("Sistema de hoje", "Today's system"): [num(sa[k], 1) for _, k in rows],
+                               T("Com RESILIA", "With RESILIA"): [num(sb[k], 1) for _, k in rows]},
+                              index=[n for n, _ in rows]))
+    explain(T("Como ler:", "How to read:"),
+            T("as barras acima de zero mostram de onde vem a energia entregue em cada hora (amarelo = sol, azul = bateria, "
+              "castanho = gerador); a parte preta é energia que faltou. No sistema de hoje é um apagão; no RESILIA é sobretudo "
+              "conforto e moagem adiados de propósito para proteger a clínica. As barras abaixo de zero são sol guardado na "
+              "bateria. A linha escura é a procura da aldeia e a linha vermelha pontilhada é a carga da bateria.",
+              "bars above zero show where each hour's delivered energy comes from (yellow = solar, blue = battery, brown = "
+              "generator); the black part is energy that was missing. In today's system it is a blackout; with RESILIA it is "
+              "mostly comfort and milling deliberately postponed to protect the clinic. Bars below zero are solar stored in the "
+              "battery. The dark line is village demand and the dotted red line is the battery charge."))
 
 
 def _physics_notes(orr, oc, t):

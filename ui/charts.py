@@ -133,6 +133,39 @@ def sources(o: pd.DataFrame, title):
     return base(fig, title, height=360)
 
 
+def balance24(o: pd.DataFrame, title, ymax=None):
+    """Balanço de um dia (00 h → 23 h): de onde vem a energia entregue, o que ficou por servir e a bateria."""
+    h = o.index.hour
+    served = o["sC"] + o["sE"] + o["sP"] + o["pump"]
+    demand = o["dC"] + o["dE"] + o["dP"] + o["pump"]
+    unmet = (demand - served).clip(lower=0)
+    bat, dsl, wnd = o["bat_dis"], o["diesel"], o["wind"]
+    sun = (served - bat - dsl - wnd).clip(lower=0)
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    fig.add_trace(go.Bar(x=h, y=sun, name=T("Sol", "Solar"), marker_color=C["solar"]))
+    if wnd.sum() > 0:
+        fig.add_trace(go.Bar(x=h, y=wnd, name=T("Vento", "Wind"), marker_color=C["wind"]))
+    fig.add_trace(go.Bar(x=h, y=bat, name=T("Bateria", "Battery"), marker_color=C["bat"]))
+    if dsl.sum() > 0:
+        fig.add_trace(go.Bar(x=h, y=dsl, name=T("Gerador", "Generator"), marker_color=C["diesel"]))
+    fig.add_trace(go.Bar(x=h, y=unmet, name=T("Interrupção (não servida)", "Interruption (unserved)"),
+                         marker_color=C["unmet"]))
+    fig.add_trace(go.Bar(x=h, y=-o["bat_ch"], name=T("Sol a carregar a bateria", "Solar charging the battery"),
+                         marker_color="rgba(242,169,0,.35)"))
+    fig.add_trace(go.Scatter(x=h, y=demand, name=T("Procura da aldeia", "Village demand"), mode="lines+markers",
+                             line=dict(color="#1F2933", width=2.5), marker=dict(size=5)))
+    fig.add_trace(go.Scatter(x=h, y=100 * o["soc"], name=T("Bateria (%)", "Battery (%)"),
+                             line=dict(color=C["red"], width=2.5, dash="dot")), secondary_y=True)
+    fig.update_layout(barmode="relative", bargap=0.12)
+    fig.update_xaxes(title_text=T("Hora do dia", "Hour of day"), tickmode="array", tickvals=list(range(0, 24, 3)),
+                     ticktext=[f"{x:02d}h" for x in range(0, 24, 3)])
+    fig.update_yaxes(title_text="kW", secondary_y=False, range=[-(ymax or 1) * 0.6, (ymax or 1) * 1.15] if ymax else None)
+    fig.update_yaxes(title_text=T("Bateria (%)", "Battery (%)"), range=[0, 105], secondary_y=True, showgrid=False)
+    base(fig, title, height=430)
+    fig.update_layout(legend=dict(orientation="h", y=-0.22, yanchor="top", x=0), margin=dict(t=50, b=120))
+    return fig
+
+
 STATUS_COLORS = [[0.0, C["off"]], [0.25, C["off"]], [0.25, C["planned"]], [0.5, C["planned"]],
                  [0.5, C["partial"]], [0.75, C["partial"]], [0.75, C["ok"]], [1.0, C["ok"]]]
 
