@@ -29,9 +29,7 @@ def balance24(o: pd.DataFrame, title, ymax=None, height=440, legend=True):
     """Balanço de 24 h: de onde vem a energia, o que faltou, a carga da bateria e a procura."""
     h = o.index.hour
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.add_trace(go.Bar(x=h, y=o["direct_pv"], name=T("Sol", "Solar"), marker_color=C["solar"]))
-    if o["wind"].sum() > 0:
-        fig.add_trace(go.Bar(x=h, y=o["direct_wind"], name=T("Vento", "Wind"), marker_color=C["wind"]))
+    fig.add_trace(go.Bar(x=h, y=o["direct"], name=T("Sol", "Solar"), marker_color=C["solar"]))
     fig.add_trace(go.Bar(x=h, y=o["bat_dis"], name=T("Bateria", "Battery"), marker_color=C["bat"]))
     fig.add_trace(go.Bar(x=h, y=o["unmet"], name=T("Energia em falta (interrupção)", "Energy missing (interruption)"),
                          marker_color=C["unmet"]))
@@ -82,7 +80,7 @@ def sizing_map(tab: pd.DataFrame, eff, res, title):
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=tab["cost"] / 1000, y=tab["bad_days"], mode="markers", name=T("Sistemas testados", "Systems tested"),
                              marker=dict(color="#C3C8D0", size=8),
-                             text=[f"{p:.0f} kWp · {b:.0f} kWh · {w:.0f} kW" for p, b, w in zip(tab.pv, tab.bat, tab.wind)],
+                             text=[f"{p:.0f} kWp · {b:.0f} kWh" for p, b in zip(tab.pv, tab.bat)],
                              hovertemplate="%{text}<br>%{x:.0f}k USD · %{y:.1f}<extra></extra>"))
     for row, name, col in [(eff, T("Só eficiência", "Efficiency only"), "#6B7280"),
                            (res, T("Resiliente (recomendado)", "Resilient (recommended)"), C["red"])]:

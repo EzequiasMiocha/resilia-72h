@@ -8,18 +8,17 @@ Grupo 36 (UEM) · EMERGE Final Hackathon.
 | Desafio | Onde está |
 |---|---|
 | Simulação que mostra como um sistema off-grid equilibra oferta e procura em **24 horas** | **Simulador 24 h**: balanço hora a hora de um dia real |
-| Entradas: energia solar, energia eólica, capacidade da bateria, perfil de procura | Painel lateral: painéis (kWp), aerogerador (kW), baterias (kWh), número de famílias e serviços |
+| Entradas: energia solar, capacidade da bateria, perfil de procura | Painel lateral: painéis (kWp), baterias (kWh), número de famílias e serviços |
 | Saídas: balanço energético e risco de interrupção | Gráfico de 24 h, carga da bateria, energia em falta (%) e horas sem energia |
-| Diferencial: optimizar para a **resiliência**, não só para a eficiência | **Dimensionamento**: 224 sistemas testados contra 11 anos de dias reais; o mais barato que aguenta os dias maus |
+| Diferencial: optimizar para a **resiliência**, não só para a eficiência | **Dimensionamento**: 156 sistemas testados contra 11 anos de dias reais; o mais barato que aguenta os dias maus |
 
 ## Como funciona
 
-1. **Dados reais:** sol, vento e temperatura de Mabote, hora a hora, 2015–2025 (reanálise ERA5, Copernicus/ECMWF).
-2. **Oferta:** painéis solares (com efeito da temperatura e arrefecimento pelo vento) e um pequeno aerogerador. O sol e o
-   vento variam hora a hora.
+1. **Dados reais:** sol e temperatura de Mabote, hora a hora, 2015–2025 (reanálise ERA5, Copernicus/ECMWF).
+2. **Oferta:** só energia solar (painéis com efeito da temperatura). O sol varia hora a hora.
 3. **Procura:** calculada a partir do número de famílias e dos serviços (centro de saúde, escola, bomba de água, moagem,
    iluminação pública). Varia com a hora, o dia da semana, o calor e de dia para dia.
-4. **Balanço de cada hora:** renováveis → consumo; excedente → bateria; défice → bateria (até 20 % mínimo); o resto é
+4. **Balanço de cada hora:** sol → consumo; excedente → bateria; défice → bateria (até 20 % mínimo); o resto é
    energia em falta.
 5. **Dimensionamento a longo prazo:** «só eficiência» = o mais barato para o dia médio; «resiliente» = o mais barato que
    cumpre o nível de protecção (energia em falta, dias maus por ano e autonomia) em 11 anos reais.

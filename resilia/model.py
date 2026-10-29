@@ -1,11 +1,11 @@
-"""RESILIA — modelo de um sistema off-grid solar + eólico + bateria para Mabote (Inhambane).
+"""RESILIA — modelo de um sistema off-grid solar + bateria para Mabote (Inhambane).
 
 O modelo é deliberadamente simples, para se compreender facilmente:
-  1. Oferta  — painéis solares (com efeito da temperatura e do vento) e um pequeno aerogerador,
-               ambos com dados horários reais (ERA5, 2015–2025): o sol e o vento variam hora a hora.
+  1. Oferta  — painéis solares com dados horários reais (ERA5, 2015–2025): o sol varia hora a hora;
+               a temperatura reduz a produção e o vento arrefece os painéis.
   2. Procura — calculada a partir do número de famílias e dos serviços da aldeia; varia ao longo
                do dia, entre dias da semana e de dia para dia.
-  3. Balanço — em cada hora: renováveis → consumo; excedente → bateria; défice → bateria;
+  3. Balanço — em cada hora: sol → consumo; excedente → bateria; défice → bateria;
                o que a bateria não cobre é energia não servida (interrupção).
   4. Dimensionamento a longo prazo — cada sistema candidato é testado contra 11 anos de dias reais.
      «Eficiente» = o mais barato que serve o dia médio. «Resiliente» = o mais barato que também
@@ -13,7 +13,6 @@ O modelo é deliberadamente simples, para se compreender facilmente:
 """
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,8 +29,7 @@ NOCT = 45.0          # temperatura nominal de operação da célula
 ETA = 0.95           # eficiência de carga e de descarga da bateria
 SOC_MIN = 0.20       # a bateria nunca desce abaixo de 20 % (protege a vida útil)
 C_RATE = 0.5         # potência máxima da bateria = 0,5 × capacidade
-HUB = 18.0           # altura do aerogerador (m)
-COST = dict(pv=650.0, bat=320.0, wind=3500.0)   # USD por kWp / kWh / kW (indicativo, mini-redes em África)
+COST = dict(pv=650.0, bat=320.0)   # USD por kWp / kWh (indicativo, mini-redes em África)
 
 
 # ───────────────────────────── dados ─────────────────────────────
@@ -61,7 +59,7 @@ def _sun(idx: pd.DatetimeIndex):
 
 
 def resource(df: pd.DataFrame) -> pd.DataFrame:
-    """Produção por unidade instalada: kW por kWp solar e kW por kW eólico, hora a hora."""
+    """Produção solar por kWp instalado, hora a hora."""
     cz, ci = _sun(df.index)
     ghi = df["shortwave_radiation"].values.astype(float)
     dif = df["diffuse_radiation"].values.astype(float)
@@ -74,15 +72,7 @@ def resource(df: pd.DataFrame) -> pd.DataFrame:
     v10 = df["wind_speed_10m"].values.astype(float)
     tc = ta + (NOCT - 20) * poa / 800.0 * 9.5 / (5.7 + 3.8 * np.clip(v10, 0, 30))   # o vento arrefece o painel
     pv1 = np.clip(poa / 1000.0 * (1 + GAMMA * (tc - 25)) * PR, 0, None)
-    # vento à altura do aerogerador (perfil vertical a partir de 10 m e 100 m)
-    if "wind_speed_100m" in df:
-        alpha = np.clip(np.log(np.maximum(df["wind_speed_100m"].values, 0.1) / np.maximum(v10, 0.1)) / math.log(10), 0.05, 0.35)
-    else:
-        alpha = np.full(len(df), 0.14)
-    vh = v10 * (HUB / 10.0) ** alpha
-    vin, vr, vout = 2.5, 11.0, 25.0
-    w1 = np.where(vh >= vout, 0.0, np.clip((vh ** 3 - vin ** 3) / (vr ** 3 - vin ** 3), 0, 1))
-    return pd.DataFrame({"pv1": pv1, "w1": w1, "poa": poa, "ghi": ghi, "t": ta, "v": v10, "vh": vh,
+    return pd.DataFrame({"pv1": pv1, "poa": poa, "ghi": ghi, "t": ta, "v": v10,
                          "rain": df["precipitation"].values}, index=df.index)
 
 
@@ -130,7 +120,6 @@ def demand(idx: pd.DatetimeIndex, temp: np.ndarray, v: Village) -> pd.DataFrame:
 @dataclass
 class System:
     pv: float = 40.0      # kWp
-    wind: float = 5.0     # kW
     bat: float = 120.0    # kWh
 
 
@@ -138,14 +127,13 @@ def simulate(res: pd.DataFrame, dem: np.ndarray, s: System, soc0: float = 0.6) -
     """Balanço hora a hora para um sistema."""
     n = len(res)
     pv = res["pv1"].values * s.pv
-    wd = res["w1"].values * s.wind
     cap = max(s.bat, 1e-9)
     emin, pmax = SOC_MIN * s.bat, C_RATE * s.bat
     E = soc0 * s.bat
     out = np.zeros((n, 7))
     for t in range(n):
         d = float(dem[t])
-        re = float(pv[t] + wd[t])
+        re = float(pv[t])
         direct = min(re, d)
         sur, dfc = re - direct, d - direct
         ch = min(sur, pmax, max(s.bat - E, 0) / ETA) if s.bat > 0 else 0.0
@@ -154,20 +142,17 @@ def simulate(res: pd.DataFrame, dem: np.ndarray, s: System, soc0: float = 0.6) -
         E -= dis / ETA
         out[t] = (direct, ch, dis, dfc - dis, sur - ch, E / cap if s.bat > 0 else 0.0, d)
     o = pd.DataFrame(out, columns=["direct", "bat_ch", "bat_dis", "unmet", "curt", "soc", "demand"], index=res.index)
-    o["pv"], o["wind"] = pv, wd
-    # quanto do consumo directo veio do sol e quanto do vento (proporcional)
-    share = np.where(pv + wd > 0, pv / np.maximum(pv + wd, 1e-9), 1.0)
-    o["direct_pv"], o["direct_wind"] = o["direct"] * share, o["direct"] * (1 - share)
+    o["pv"] = pv
     return o
 
 
 def day_metrics(o: pd.DataFrame, s: System) -> dict:
     dem, un = o["demand"].sum(), o["unmet"].sum()
-    gen = (o["pv"] + o["wind"]).sum()
+    gen = o["pv"].sum()
     return dict(
         risk=100 * un / max(dem, 1e-9), unmet=un, demand=dem, served=dem - un,
         hours=int((o["unmet"] > 0.01 * o["demand"]).sum()),
-        waste=100 * o["curt"].sum() / max(gen, 1e-9), pv=o["pv"].sum(), wind=o["wind"].sum(),
+        waste=100 * o["curt"].sum() / max(gen, 1e-9), pv=gen,
         soc_end=100 * o["soc"].iloc[-1], soc_min=100 * o["soc"].min(),
         autonomy=(1 - SOC_MIN) * s.bat * ETA / max(o["demand"].mean(), 1e-9),
     )
@@ -187,8 +172,7 @@ DAY_TYPES = ["sunny", "partly", "cloudy", "storm", "hot"]
 
 def representative_days(df: pd.DataFrame) -> dict:
     """Escolhe dias reais típicos de cada condição a partir de 11 anos de dados."""
-    d = df.resample("D").agg({"shortwave_radiation": "sum", "precipitation": "sum", "temperature_2m": "max",
-                              "wind_gusts_10m": "max"})
+    d = df.resample("D").agg({"shortwave_radiation": "sum", "precipitation": "sum", "temperature_2m": "max"})
     d = d[d.index.year >= 2016]
     sol = d["shortwave_radiation"]
 
@@ -208,15 +192,16 @@ def representative_days(df: pd.DataFrame) -> dict:
 
 
 # ───────────────────────────── dimensionamento a longo prazo ─────────────────────────────
-GRID = dict(pv=[30, 40, 50, 60, 70, 80, 90], bat=[80, 120, 160, 200, 260, 320, 400, 500], wind=[0, 5, 10, 15])
+GRID = dict(pv=list(range(30, 95, 5)), bat=[80, 100, 120, 140, 160, 180, 200, 240, 280, 320, 400, 500])
+N_SYSTEMS = len(GRID["pv"]) * len(GRID["bat"])   # 156 sistemas
 
 
 def long_term(res: pd.DataFrame, dem: np.ndarray, grid: dict = GRID) -> pd.DataFrame:
     """Testa todos os sistemas da grelha contra a série completa (11 anos), em paralelo (vectorizado)."""
-    P, B, W = np.meshgrid(grid["pv"], grid["bat"], grid["wind"], indexing="ij")
-    P, B, W = P.ravel().astype(float), B.ravel().astype(float), W.ravel().astype(float)
+    P, B = np.meshgrid(grid["pv"], grid["bat"], indexing="ij")
+    P, B = P.ravel().astype(float), B.ravel().astype(float)
     m = len(P)
-    pv1, w1 = res["pv1"].values, res["w1"].values
+    pv1 = res["pv1"].values
     days = ((res.index.normalize() - res.index.normalize()[0]).days).values
     nd = days.max() + 1
     E = 0.6 * B
@@ -226,7 +211,7 @@ def long_term(res: pd.DataFrame, dem: np.ndarray, grid: dict = GRID) -> pd.DataF
     curt = np.zeros(m); gen = np.zeros(m); hours = np.zeros(m)
     for t in range(len(dem)):
         d = dem[t]
-        re = pv1[t] * P + w1[t] * W
+        re = pv1[t] * P
         direct = np.minimum(re, d)
         sur, dfc = re - direct, d - direct
         ch = np.minimum(np.minimum(sur, pmax), np.maximum(B - E, 0) / ETA)
@@ -241,8 +226,8 @@ def long_term(res: pd.DataFrame, dem: np.ndarray, grid: dict = GRID) -> pd.DataF
     years = len(dem) / 8760.0
     day_risk = 100 * un_day / np.maximum(dem_day[:, None], 1e-9)
     out = pd.DataFrame(dict(
-        pv=P, bat=B, wind=W,
-        cost=P * COST["pv"] + B * COST["bat"] + W * COST["wind"],
+        pv=P, bat=B,
+        cost=P * COST["pv"] + B * COST["bat"],
         risk=100 * un_day.sum(0) / dem.sum(),                       # energia não servida, média de 11 anos
         worst_day=day_risk.max(0),                                   # pior dia em 11 anos
         bad_days=(day_risk > 10).sum(0) / years,                     # dias por ano com >10 % em falta

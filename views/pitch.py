@@ -60,7 +60,7 @@ def pitch_data(version=1):
     dd = get_demand(VILLAGE)["total"].resample("D").sum()
     test = {}
     for name, row in (("e", e), ("r", r)):
-        s = M.System(pv=row["pv"], wind=row["wind"], bat=row["bat"])
+        s = M.System(pv=row["pv"], bat=row["bat"])
         test[name] = {k: M.day_metrics(M.simulate_day(res, D, s, days[k]), s) for k in M.DAY_TYPES}
     return dict(e=e, r=r, weak_per_year=weak.sum() / (len(daily) / 365.25), weak_run=best,
                 dem_mean=dd.mean(), dem_min=dd.quantile(0.02), dem_max=dd.quantile(0.98), test=test,
@@ -110,7 +110,7 @@ def _idea(ic, h, x):
 
 
 def _sys(row):
-    return f"{num(row['pv'])} kWp · {num(row['bat'])} kWh" + (f" · {num(row['wind'])} kW" if row["wind"] else "")
+    return f"{num(row['pv'])} kWp · {num(row['bat'])} kWh"
 
 
 # ───────────────────────────── diapositivos ─────────────────────────────
@@ -144,13 +144,13 @@ def s_objectivo(d):
 <h2>{T("Uma ferramenta simples para planear uma mini-rede solar resiliente e eficiente.",
        "A simple tool to plan a resilient and efficient solar mini-grid.")}</h2>
 <div class="lead">{T(
- "<b>Objectivo:</b> mostrar como um sistema off-grid (sol + vento + bateria) equilibra a oferta e a procura ao longo de "
+ "<b>Objectivo:</b> mostrar como um sistema off-grid (painéis solares + bateria) equilibra a oferta e a procura ao longo de "
  "<b>24 horas</b>, medir o <b>risco de interrupção</b> e escolher o sistema que <b>aguenta os dias maus</b> sem gastar mais do que o necessário.",
- "<b>Objective:</b> show how an off-grid system (solar + wind + battery) balances supply and demand over <b>24 hours</b>, "
+ "<b>Objective:</b> show how an off-grid system (solar panels + battery) balances supply and demand over <b>24 hours</b>, "
  "measure the <b>interruption risk</b> and choose the system that <b>withstands bad days</b> without spending more than needed.")}</div>
 <div class="ideas">
- {_idea("sun", T("Entradas", "Inputs"), T("Painéis solares (kWp), aerogerador (kW), baterias (kWh) e a procura da aldeia (número de famílias e serviços).",
-   "Solar panels (kWp), wind turbine (kW), batteries (kWh) and village demand (number of households and services)."))}
+ {_idea("sun", T("Entradas", "Inputs"), T("Painéis solares (kWp), baterias (kWh) e a procura da aldeia (número de famílias e serviços).",
+   "Solar panels (kWp), batteries (kWh) and village demand (number of households and services)."))}
  {_idea("battery", T("Saídas", "Outputs"), T("Balanço energético hora a hora, carga da bateria e risco de interrupção (energia em falta e horas sem energia).",
    "Hour-by-hour energy balance, battery charge and interruption risk (energy missing and hours without power)."))}
  {_idea("shield", T("Diferencial", "The twist"), T("Optimizar para a <b>resiliência</b> e não só para a eficiência: o sistema é testado contra 11 anos de dias reais.",
@@ -160,16 +160,16 @@ def s_objectivo(d):
 
 def s_como(d):
     steps = [
-        (T("1 · Entradas", "1 · Inputs"), T("Sol, vento e baterias instalados; número de famílias e serviços.",
-                                            "Installed solar, wind and batteries; number of households and services.")),
-        (T("2 · Dados reais", "2 · Real data"), T("Sol, vento e temperatura de Mabote, hora a hora, 2015–2025.",
-                                                  "Mabote sun, wind and temperature, hour by hour, 2015–2025.")),
-        (T("3 · Balanço de cada hora", "3 · Hourly balance"), T("Sol e vento servem a aldeia; o excedente carrega a bateria; o défice sai da bateria.",
-                                                                 "Sun and wind serve the village; surplus charges the battery; shortfalls come from the battery.")),
+        (T("1 · Entradas", "1 · Inputs"), T("Painéis solares e baterias instalados; número de famílias e serviços.",
+                                            "Installed solar panels and batteries; number of households and services.")),
+        (T("2 · Dados reais", "2 · Real data"), T("Sol e temperatura de Mabote, hora a hora, 2015–2025.",
+                                                  "Mabote sun and temperature, hour by hour, 2015–2025.")),
+        (T("3 · Balanço de cada hora", "3 · Hourly balance"), T("O sol serve a aldeia; o excedente carrega a bateria; o défice sai da bateria.",
+                                                                 "The sun serves the village; surplus charges the battery; shortfalls come from the battery.")),
         (T("4 · Resultado", "4 · Result"), T("Energia em falta e horas sem energia: o risco de interrupção.",
                                              "Energy missing and hours without power: the interruption risk.")),
-        (T("5 · Dimensionamento", "5 · Sizing"), T("224 sistemas testados em 11 anos: o mais barato que aguenta os dias maus.",
-                                                   "224 systems tested over 11 years: the cheapest that withstands bad days.")),
+        (T("5 · Dimensionamento", "5 · Sizing"), T(f"{M.N_SYSTEMS} sistemas testados em 11 anos: o mais barato que aguenta os dias maus.",
+                                                   f"{M.N_SYSTEMS} systems tested over 11 years: the cheapest that withstands bad days.")),
     ]
     chain = '<div class="chain">' + '<div class="arrow">→</div>'.join(
         f'<div class="n"><div class="h">{h}</div><div class="x">{x}</div></div>' for h, x in steps) + "</div>"
@@ -192,7 +192,7 @@ def s_balanco(d):
     cols = st.columns(2)
     outs = []
     for (name, row), col in zip(((T("Só eficiência", "Efficiency only"), d["e"]), (T("Resiliente", "Resilient"), d["r"])), cols):
-        s = M.System(pv=row["pv"], wind=row["wind"], bat=row["bat"])
+        s = M.System(pv=row["pv"], bat=row["bat"])
         o = M.simulate_day(res, D, s, days[k])
         outs.append((name, row, s, o, M.day_metrics(o, s)))
     peak = max(max(o["demand"].max(), o["bat_ch"].max() / 0.75) for _, _, _, o, _ in outs)
@@ -203,7 +203,7 @@ def s_balanco(d):
                         f"<div style='font-size:22px;font-weight:800;color:{VCOL[v]}'>{num(m['risk'], 1)} % "
                         f"{T('em falta', 'missing')} · {m['hours']} h · {verdict_txt(v)}</div>", unsafe_allow_html=True)
             st.plotly_chart(charts.balance24(o, None, ymax=peak, height=340, legend=False), width="stretch")
-    st.markdown(f'<div class="lead" style="font-size:15px">{T("Amarelo = sol · azul-claro = vento · azul = bateria · <b>preto = energia em falta</b> · linha escura = procura · linha vermelha = bateria (%).", "Yellow = solar · light blue = wind · blue = battery · <b>black = energy missing</b> · dark line = demand · red line = battery (%).")}</div>',
+    st.markdown(f'<div class="lead" style="font-size:15px">{T("Amarelo = sol · azul = bateria · <b>preto = energia em falta</b> · linha escura = procura · linha vermelha = bateria (%).", "Yellow = solar · blue = battery · <b>black = energy missing</b> · dark line = demand · red line = battery (%).")}</div>',
                 unsafe_allow_html=True)
 
 

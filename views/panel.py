@@ -19,9 +19,10 @@ def get_demand(village: tuple):
     return M.demand(res.index, res["t"].values, M.Village(*village))
 
 
-@st.cache_data(show_spinner="A testar 224 sistemas contra 11 anos de dias reais… / Testing 224 systems against 11 years of real days…",
+@st.cache_data(show_spinner=f"A testar {M.N_SYSTEMS} sistemas contra 11 anos de dias reais… / "
+                            f"Testing {M.N_SYSTEMS} systems against 11 years of real days…",
                persist="disk")
-def get_long_term(village: tuple, version: int = 2):
+def get_long_term(village: tuple, version: int = 3):
     res, _ = get_resource()
     return M.long_term(res, get_demand(village)["total"].values)
 
@@ -31,8 +32,8 @@ def presets(village: tuple):
     return M.choose(tab, M.LEVELS["recommended"])
 
 
-def _set_system(pv, wind, bat):
-    st.session_state["sys_pv"], st.session_state["sys_wind"], st.session_state["sys_bat"] = int(pv), int(wind), int(bat)
+def _set_system(pv, bat):
+    st.session_state["sys_pv"], st.session_state["sys_bat"] = int(pv), int(bat)
 
 
 def build(show_system: bool = True):
@@ -61,22 +62,19 @@ def build(show_system: bool = True):
             choice = presets(village)
             e, r = choice["efficient"], choice["resilient"]
             st.session_state.setdefault("sys_pv", int(r["pv"]))
-            st.session_state.setdefault("sys_wind", 5)
             st.session_state.setdefault("sys_bat", int(r["bat"]))
             b1, b2 = st.columns(2)
             with b1:
                 st.button(T("Só eficiência", "Efficiency only"), width="stretch", on_click=_set_system,
-                          args=(e["pv"], e["wind"], e["bat"]), help=T("O mais barato para o dia médio.",
-                                                                     "The cheapest system for the average day."))
+                          args=(e["pv"], e["bat"]), help=T("O mais barato para o dia médio.",
+                                                           "The cheapest system for the average day."))
             with b2:
                 st.button(T("Resiliente", "Resilient"), width="stretch", type="primary", on_click=_set_system,
-                          args=(r["pv"], r["wind"], r["bat"]), help=T("O mais barato que aguenta os dias maus.",
-                                                                     "The cheapest system that withstands bad days."))
+                          args=(r["pv"], r["bat"]), help=T("O mais barato que aguenta os dias maus.",
+                                                           "The cheapest system that withstands bad days."))
             pv = st.slider(T("Painéis solares (kWp)", "Solar panels (kWp)"), 0, 120, step=5, key="sys_pv")
-            wind = st.slider(T("Aerogerador (kW)", "Wind turbine (kW)"), 0, 20, step=1, key="sys_wind",
-                             help=T("O vento varia hora a hora (dados reais).", "Wind varies hour by hour (real data)."))
             bat = st.slider(T("Baterias (kWh)", "Batteries (kWh)"), 0, 500, step=10, key="sys_bat")
-            sysd = M.System(pv=pv, wind=wind, bat=bat)
-            st.caption(T(f"Investimento estimado: **{num((pv * M.COST['pv'] + bat * M.COST['bat'] + wind * M.COST['wind']) / 1000)} mil USD**",
-                         f"Estimated investment: **{num((pv * M.COST['pv'] + bat * M.COST['bat'] + wind * M.COST['wind']) / 1000)}k USD**"))
+            sysd = M.System(pv=pv, bat=bat)
+            cost = (pv * M.COST["pv"] + bat * M.COST["bat"]) / 1000
+            st.caption(T(f"Investimento estimado: **{num(cost)} mil USD**", f"Estimated investment: **{num(cost)}k USD**"))
     return SimpleNamespace(res=res, days=days, village=village, dem=dem, system=sysd)

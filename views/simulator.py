@@ -29,9 +29,9 @@ def render(ctx):
     s, res, D = ctx.system, ctx.res, ctx.dem["total"].values
     page_header(T("Simulador 24 h", "24-hour simulator"),
                 T("Como o sistema equilibra a oferta e a procura num dia", "How the system balances supply and demand in a day"),
-                T("Escolha o tipo de dia. O sistema (painel à esquerda) é testado hora a hora com o sol, o vento e o consumo "
+                T("Escolha o tipo de dia. O sistema solar (painel à esquerda) é testado hora a hora com o sol e o consumo "
                   "reais de Mabote. A bateria começa o dia no estado em que estaria depois dos 7 dias reais anteriores.",
-                  "Choose the type of day. The system (left panel) is tested hour by hour with Mabote's real sun, wind and "
+                  "Choose the type of day. The solar system (left panel) is tested hour by hour with Mabote's real sun and "
                   "demand. The battery starts the day where it would be after the 7 real days before."))
 
     keys = M.DAY_TYPES
@@ -49,10 +49,10 @@ def render(ctx):
     m = M.day_metrics(o, s)
     v = M.verdict(m["risk"])
     m_ghi = res.loc[o.index, "ghi"].sum() / 1000
-    st.caption(T(f"Dia real: **{date_txt(day)}** · sol: {num(m_ghi, 1)} kWh/m² · vento médio: "
-                 f"{num(res.loc[o.index, 'v'].mean(), 1)} m/s · procura: {num(m['demand'])} kWh",
-                 f"Real day: **{date_txt(day)}** · sun: {num(m_ghi, 1)} kWh/m² · mean wind: "
-                 f"{num(res.loc[o.index, 'v'].mean(), 1)} m/s · demand: {num(m['demand'])} kWh"))
+    st.caption(T(f"Dia real: **{date_txt(day)}** · sol: {num(m_ghi, 1)} kWh/m² · produção solar: {num(m['pv'])} kWh · "
+                 f"procura: {num(m['demand'])} kWh",
+                 f"Real day: **{date_txt(day)}** · sun: {num(m_ghi, 1)} kWh/m² · solar output: {num(m['pv'])} kWh · "
+                 f"demand: {num(m['demand'])} kWh"))
 
     c = st.columns(4)
     with c[0]:
@@ -72,10 +72,10 @@ def render(ctx):
     st.plotly_chart(charts.balance24(o, T("Balanço de 24 horas: oferta × procura", "24-hour balance: supply × demand")),
                     width="stretch")
     explain(T("Como ler:", "How to read:"),
-            T("as barras acima de zero mostram de onde vem a energia em cada hora (amarelo = sol, azul-claro = vento, "
+            T("as barras acima de zero mostram de onde vem a energia em cada hora (amarelo = sol, "
               "azul = bateria). A parte preta é energia que faltou (interrupção). As barras abaixo de zero são o excedente "
               "guardado na bateria. A linha escura é a procura e a linha vermelha pontilhada é a carga da bateria.",
-              "bars above zero show where each hour's energy comes from (yellow = solar, light blue = wind, blue = battery). "
+              "bars above zero show where each hour's energy comes from (yellow = solar, blue = battery). "
               "The black part is energy that was missing (interruption). Bars below zero are surplus stored in the battery. "
               "The dark line is demand and the dotted red line is the battery charge."))
 
@@ -102,7 +102,6 @@ def render(ctx):
             T("Hora", "Hour"): [f"{h:02d}h" for h in o.index.hour],
             T("Procura (kW)", "Demand (kW)"): o["demand"].round(1),
             T("Sol (kW)", "Solar (kW)"): o["pv"].round(1),
-            T("Vento (kW)", "Wind (kW)"): o["wind"].round(1),
             T("Bateria entrega (kW)", "Battery out (kW)"): o["bat_dis"].round(1),
             T("Bateria guarda (kW)", "Battery in (kW)"): o["bat_ch"].round(1),
             T("Em falta (kW)", "Missing (kW)"): o["unmet"].round(1),
@@ -118,19 +117,17 @@ def render(ctx):
 
     with st.expander(T("Como é feito o cálculo", "How the calculation works"), icon=":material/functions:"):
         st.markdown(T("""
-1. **Sol:** produção = potência dos painéis × sol no painel ÷ 1000 × perdas (0,88) × efeito da temperatura (−0,35 % por °C acima de 25 °C; o vento arrefece os painéis).
-2. **Vento:** curva de um pequeno aerogerador (arranca a 2,5 m/s, potência máxima a 11 m/s, pára acima de 25 m/s). O vento real varia hora a hora.
-3. **Procura:** número de famílias × consumo típico de cada hora + centro de saúde, escola, bomba de água, moagem e iluminação pública. Varia com a hora, o dia da semana, o calor e de dia para dia.
-4. **Balanço de cada hora:** o sol e o vento servem a procura; o excedente carrega a bateria; o que falta sai da bateria (até 20 % de carga mínima); o resto é **energia em falta**.
-5. **Risco de interrupção** = energia em falta ÷ procura total do dia.
+1. **Sol:** produção = potência dos painéis × sol no painel ÷ 1000 × perdas (0,88) × efeito da temperatura (−0,35 % por °C acima de 25 °C).
+2. **Procura:** número de famílias × consumo típico de cada hora + centro de saúde, escola, bomba de água, moagem e iluminação pública. Varia com a hora, o dia da semana, o calor e de dia para dia.
+3. **Balanço de cada hora:** o sol serve a procura; o excedente carrega a bateria; o que falta sai da bateria (até 20 % de carga mínima); o resto é **energia em falta**.
+4. **Risco de interrupção** = energia em falta ÷ procura total do dia.
 
 Dados: reanálise ERA5 (Copernicus/ECMWF), Mabote, 2015–2025, hora a hora.
 """, """
-1. **Solar:** output = panel power × sun on the panel ÷ 1000 × losses (0.88) × temperature effect (−0.35 % per °C above 25 °C; wind cools the panels).
-2. **Wind:** power curve of a small turbine (starts at 2.5 m/s, rated at 11 m/s, stops above 25 m/s). Real wind varies hour by hour.
-3. **Demand:** number of households × typical hourly use + health centre, school, water pump, grain mill and street lighting. Varies with the hour, the weekday, heat and from day to day.
-4. **Hourly balance:** sun and wind serve demand; surplus charges the battery; shortfalls are drawn from the battery (down to a 20 % minimum); the rest is **energy missing**.
-5. **Interruption risk** = energy missing ÷ total demand of the day.
+1. **Solar:** output = panel power × sun on the panel ÷ 1000 × losses (0.88) × temperature effect (−0.35 % per °C above 25 °C).
+2. **Demand:** number of households × typical hourly use + health centre, school, water pump, grain mill and street lighting. Varies with the hour, the weekday, heat and from day to day.
+3. **Hourly balance:** the sun serves demand; surplus charges the battery; shortfalls are drawn from the battery (down to a 20 % minimum); the rest is **energy missing**.
+4. **Interruption risk** = energy missing ÷ total demand of the day.
 
 Data: ERA5 reanalysis (Copernicus/ECMWF), Mabote, 2015–2025, hourly.
 """))

@@ -15,17 +15,17 @@ VCOL = {"ok": "#16A34A", "partial": "#B45309", "fragile": C["red"]}
 
 
 def _use(r):
-    st.session_state["sys_pv"], st.session_state["sys_wind"], st.session_state["sys_bat"] = int(r["pv"]), int(r["wind"]), int(r["bat"])
+    st.session_state["sys_pv"], st.session_state["sys_bat"] = int(r["pv"]), int(r["bat"])
     st.session_state["sz_msg"] = True
 
 
 def render(ctx):
     page_header(T("Dimensionamento", "System sizing"),
                 T("Que sistema instalar para os próximos anos?", "Which system to install for the years ahead?"),
-                T("Testamos 224 combinações de painéis, baterias e aerogerador contra 11 anos de dias reais de Mabote "
+                T(f"Testamos {M.N_SYSTEMS} combinações de painéis solares e baterias contra 11 anos de dias reais de Mabote "
                   "(2015–2025). «Só eficiência» é o mais barato para o dia médio. «Resiliente» é o mais barato que também "
                   "aguenta os dias maus.",
-                  "We test 224 combinations of panels, batteries and wind turbine against 11 years of real Mabote days "
+                  f"We test {M.N_SYSTEMS} combinations of solar panels and batteries against 11 years of real Mabote days "
                   "(2015–2025). “Efficiency only” is the cheapest for the average day. “Resilient” is the cheapest that also "
                   "withstands the bad days."))
 
@@ -47,16 +47,13 @@ def render(ctx):
                     unsafe_allow_html=True)
 
     st.markdown(f"#### {T('O sistema recomendado', 'The recommended system')}")
-    a, b, c, d = st.columns(4)
+    a, b, d = st.columns(3)
     with a:
         card(T("Painéis solares", "Solar panels"), f"{num(r['pv'])} kWp",
              T(f"≈ {round(r['pv'] * 1000 / 550)} painéis de 550 W", f"≈ {round(r['pv'] * 1000 / 550)} panels of 550 W"), C["solar"])
     with b:
         card(T("Baterias", "Batteries"), f"{num(r['bat'])} kWh",
              T(f"autonomia {num(r['autonomy'])} h sem sol", f"{num(r['autonomy'])} h autonomy without sun"), C["bat"])
-    with c:
-        card(T("Aerogerador", "Wind turbine"), f"{num(r['wind'])} kW" if r["wind"] else T("não compensa", "not worth it"),
-             T("o dimensionamento decide pelo custo", "sizing decides by cost"), C["wind"])
     with d:
         card(T("Investimento", "Investment"), f"{num(r['cost'] / 1000)} {T('mil USD', 'k USD')}",
              T(f"+{num(100 * (r['cost'] / e['cost'] - 1))} % face ao «só eficiência»",
@@ -68,13 +65,13 @@ def render(ctx):
 
     st.markdown(f"#### {T('Só eficiência vs resiliente, em 11 anos reais', 'Efficiency only vs resilient, over 11 real years')}")
     rows = [
-        (T("Painéis / baterias / vento", "Panels / batteries / wind"), lambda x: f"{num(x['pv'])} kWp · {num(x['bat'])} kWh · {num(x['wind'])} kW"),
+        (T("Painéis / baterias", "Panels / batteries"), lambda x: f"{num(x['pv'])} kWp · {num(x['bat'])} kWh"),
         (T("Investimento estimado", "Estimated investment"), lambda x: f"{num(x['cost'])} USD"),
         (T("Energia em falta (média)", "Energy missing (average)"), lambda x: f"{num(x['risk'], 2)} %"),
         (T("Dias maus por ano (> 10 % em falta)", "Bad days per year (> 10 % missing)"), lambda x: num(x["bad_days"], 1)),
         (T("Horas com interrupção por ano", "Hours with interruption per year"), lambda x: f"{num(x['hours'])} h"),
         (T("Autonomia da bateria", "Battery autonomy"), lambda x: f"{num(x['autonomy'])} h"),
-        (T("Energia renovável desperdiçada", "Renewable energy wasted"), lambda x: f"{num(x['waste'])} %"),
+        (T("Energia solar desperdiçada", "Solar energy wasted"), lambda x: f"{num(x['waste'])} %"),
     ]
     st.table(pd.DataFrame({T("Só eficiência", "Efficiency only"): [f(e) for _, f in rows],
                            T("Resiliente (recomendado)", "Resilient (recommended)"): [f(r) for _, f in rows]},
@@ -101,7 +98,7 @@ def render(ctx):
         for k in M.DAY_TYPES:
             vals = []
             for sysrow in (e, r):
-                s = M.System(pv=sysrow["pv"], wind=sysrow["wind"], bat=sysrow["bat"])
+                s = M.System(pv=sysrow["pv"], bat=sysrow["bat"])
                 mm = M.day_metrics(M.simulate_day(res, D, s, ctx.days[k]), s)
                 vals.append(f"{num(mm['risk'], 1)} % · {verdict_txt(M.verdict(mm['risk']))}")
             rows2.append((day_label(k), *vals))
@@ -111,15 +108,15 @@ def render(ctx):
 
     with st.expander(T("Pressupostos e dados", "Assumptions and data"), icon=":material/info:"):
         st.markdown(T(f"""
-- **Dados:** sol, vento e temperatura reais de Mabote, hora a hora, 2015–2025 (reanálise ERA5, Copernicus/ECMWF): 96 432 horas.
+- **Dados:** sol e temperatura reais de Mabote, hora a hora, 2015–2025 (reanálise ERA5, Copernicus/ECMWF): 96 432 horas.
 - **Procura:** calculada a partir do número de famílias e dos serviços (painel à esquerda), com variação diária.
 - **Bateria:** lítio (LFP), eficiência 95 %, nunca abaixo de 20 % de carga.
-- **Custos indicativos:** solar {num(M.COST['pv'])} USD/kWp, baterias {num(M.COST['bat'])} USD/kWh, aerogerador {num(M.COST['wind'])} USD/kW (mini-redes em África, 2024–2025).
+- **Custos indicativos:** solar {num(M.COST['pv'])} USD/kWp, baterias {num(M.COST['bat'])} USD/kWh (mini-redes em África, 2024–2025).
 - **Dia mau:** um dia em que falta mais de 10 % da energia pedida.
 """, f"""
-- **Data:** real Mabote sun, wind and temperature, hourly, 2015–2025 (ERA5 reanalysis, Copernicus/ECMWF): 96,432 hours.
+- **Data:** real Mabote sun and temperature, hourly, 2015–2025 (ERA5 reanalysis, Copernicus/ECMWF): 96,432 hours.
 - **Demand:** calculated from the number of households and services (left panel), with daily variation.
 - **Battery:** lithium (LFP), 95 % efficiency, never below 20 % charge.
-- **Indicative costs:** solar {num(M.COST['pv'])} USD/kWp, batteries {num(M.COST['bat'])} USD/kWh, wind turbine {num(M.COST['wind'])} USD/kW (African mini-grids, 2024–2025).
+- **Indicative costs:** solar {num(M.COST['pv'])} USD/kWp, batteries {num(M.COST['bat'])} USD/kWh (African mini-grids, 2024–2025).
 - **Bad day:** a day on which more than 10 % of the requested energy is missing.
 """))
