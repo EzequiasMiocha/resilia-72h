@@ -1,4 +1,4 @@
-﻿# RESILIA MZ · mini-rede solar resiliente e eficiente (Mabote)
+﻿# RESILIA MZ · mini-rede solar resiliente e eficiente (Mabote) · v2
 streamlit==1.66.1
 pandas==3.1.0
 numpy==2.5.4

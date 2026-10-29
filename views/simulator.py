@@ -14,8 +14,8 @@ VCOL = {"ok": "#16A34A", "partial": "#B45309", "fragile": C["red"]}
 
 def _verdict_box(v, risk, hours):
     txt = {
-        "ok": T("O sistema serve toda (ou quase toda) a procura neste dia.",
-                "The system serves all (or almost all) demand on this day."),
+        "ok": T("A aldeia teve luz em todas as horas deste dia.",
+                "The village had power every hour of this day."),
         "partial": T(f"Faltaram {num(risk)} % da energia, em {hours} h. Cortes curtos.",
                      f"{num(risk)} % of the energy was missing, over {hours} h. Short cuts."),
         "fragile": T(f"Faltaram {num(risk)} % da energia, em {hours} h. A aldeia fica sem luz várias horas.",
@@ -71,7 +71,7 @@ def render(ctx):
     day = ctx.days[k]
     o = M.simulate_day(res, D, s, day)
     m = M.day_metrics(o, s)
-    v = M.verdict(m["risk"])
+    v = M.verdict(m["risk"], m["hours"])
     m_ghi = res.loc[o.index, "ghi"].sum() / 1000
     st.caption(T(f"Um dia real de Mabote · sol: {num(m_ghi, 1)} kWh/m² · produção solar: {num(m['pv'])} kWh · "
                  f"procura: {num(m['demand'])} kWh",
@@ -114,8 +114,8 @@ def render(ctx):
     for kk in keys:
         oo = M.simulate_day(res, D, s, ctx.days[kk])
         mm = M.day_metrics(oo, s)
-        vv = M.verdict(mm["risk"])
-        col = "#16A34A" if mm["hours"] == 0 else ("#B45309" if vv != "fragile" else C["red"])
+        vv = M.verdict(mm["risk"], mm["hours"])
+        col = VCOL[vv]
         cells += (f'<div class="k" style="border-top:4px solid {col}"><div class="u"><b>{day_label(kk)}</b></div>'
                   f'<div class="n" style="color:{col};font-size:24px">{cut_txt(mm["hours"])}</div>'
                   f'<div class="u">{T("energia em falta", "energy missing")}: {num(mm["risk"], 1)} %</div></div>')

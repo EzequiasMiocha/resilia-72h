@@ -51,7 +51,7 @@ def _title(k):
 
 
 @st.cache_data(show_spinner=False)
-def pitch_data(version=3):
+def pitch_data(version=4):
     res, days = get_resource()
     D = get_demand(VILLAGE)["total"].values
     ch = presets(VILLAGE)
@@ -118,7 +118,7 @@ def _idea(ic, h, x):
 
 def hcol(m):
     """Verde = sem cortes; laranja = cortes curtos; vermelho = muitas horas sem luz."""
-    return "#16A34A" if m["hours"] == 0 else (C["red"] if M.verdict(m["risk"]) == "fragile" else "#B45309")
+    return VCOL[M.verdict(m["risk"], m["hours"])]
 
 
 def _sys(row):
@@ -232,7 +232,7 @@ def s_balanco(d):
         outs.append((name, row, s, o, M.day_metrics(o, s)))
     peak = max(max(o["demand"].max(), o["bat_ch"].max() / 0.75) for _, _, _, o, _ in outs)
     for (name, row, s, o, m), col in zip(outs, cols):
-        v = M.verdict(m["risk"])
+        v = M.verdict(m["risk"], m["hours"])
         with col:
             st.markdown(f"<div style='font-size:15px;font-weight:800'>{name} · <span style='color:#6B7280;font-weight:600'>{_sys(row)}</span></div>"
                         f"<div style='font-size:22px;font-weight:800;color:{hcol(m)}'>"

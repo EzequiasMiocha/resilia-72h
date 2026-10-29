@@ -167,8 +167,9 @@ def day_metrics(o: pd.DataFrame, s: System) -> dict:
     )
 
 
-def verdict(risk: float):
-    if risk <= 2:
+def verdict(risk: float, hours: int = 0):
+    """Resiliente = nenhuma hora sem luz. Parcial = cortes curtos. Frágil = mais de 10 % da energia em falta."""
+    if hours == 0 and risk <= 0.5:
         return "ok"
     if risk <= 10:
         return "partial"
@@ -180,23 +181,27 @@ DAY_TYPES = ["sunny", "partly", "cloudy", "storm", "hot"]
 
 
 def representative_days(df: pd.DataFrame) -> dict:
-    """Escolhe dias reais típicos de cada condição a partir de 11 anos de dados."""
-    d = df.resample("D").agg({"shortwave_radiation": "sum", "precipitation": "sum", "temperature_2m": "max"})
-    d = d[d.index.year >= 2016]
-    sol = d["shortwave_radiation"]
+    """Escolhe dias reais típicos de cada condição.
 
-    def closest(series, q, pool=None):
-        s = series if pool is None else series[pool]
-        target = s.quantile(q)
-        return (s - target).abs().idxmin()
+    Cada dia escolhido tem uma véspera normal (os dois dias anteriores com sol perto do habitual), para que o
+    resultado mostre o efeito desse dia e não o de dias maus anteriores."""
+    d = df.resample("D").agg({"shortwave_radiation": "sum", "precipitation": "sum", "temperature_2m": "max"})
+    sol = d["shortwave_radiation"]
+    normal_eve = (sol.shift(1) >= 0.8 * sol.mean()) & (sol.shift(2) >= 0.8 * sol.mean())
+    ok = (d.index.year >= 2016) & normal_eve
+
+    def closest(series, q, pool):
+        target = series[pool].quantile(q) if pool is not None else series.quantile(q)
+        cand = series[ok & (pool if pool is not None else True)]
+        return (cand - target).abs().idxmin()
 
     rain_pool = d["precipitation"] >= 30          # dia típico de chuva forte (não o pior caso)
     return {
-        "sunny": closest(sol, 0.90),
-        "partly": closest(sol, 0.50),
-        "cloudy": closest(sol, 0.08),
-        "storm": closest(sol, 0.50, rain_pool) if rain_pool.any() else closest(sol, 0.05),
-        "hot": d["temperature_2m"].idxmax(),
+        "sunny": closest(sol, 0.90, None),
+        "partly": closest(sol, 0.50, None),
+        "cloudy": closest(sol, 0.08, None),
+        "storm": closest(sol, 0.50, rain_pool) if (rain_pool & ok).any() else closest(sol, 0.05, None),
+        "hot": d["temperature_2m"][ok].idxmax(),
     }
 
 
