@@ -252,11 +252,11 @@ def brand():
 <div id="top"></div>
 <div class="brand">
   {lh}
-  <div><div class="name">RESILIA <span>72H</span></div>
-  <div class="sub">{T("Energia que não apaga quando o clima aperta", "Power that stays on when the weather turns")}
-  · {T("Moçambique · Marrocos · Mali", "Mozambique · Morocco · Mali")}</div></div>
+  <div><div class="name">RESILIA <span>MZ</span></div>
+  <div class="sub">{T("Mini-rede solar resiliente e eficiente", "Resilient and efficient solar mini-grid")}
+  · Mabote, Inhambane</div></div>
   <div class="right"><span class="pill red">EMERGE Final Hackathon · Maputo</span>
-  <span class="pill">{T("Dados climáticos reais 2015–2025", "Real climate data 2015–2025")}</span>
+  <span class="pill">{T("Dados reais 2015–2025", "Real data 2015–2025")}</span>
   <span class="pill">{T("Grupo 36 · UEM", "Team 36 · UEM")}</span>{eh}</div>
 </div>""", unsafe_allow_html=True)
 
@@ -327,8 +327,8 @@ def legend(items):
 
 
 def footer():
-    st.markdown(f'<div class="foot">RESILIA 72H · {T("Grupo 36", "Team 36")} — Ezequias Miocha, Laura Hele, '
+    st.markdown(f'<div class="foot">RESILIA MZ · {T("Grupo 36", "Team 36")} — Ezequias Miocha, Laura Hele, '
                 f'Suely Muando · Universidade Eduardo Mondlane · {T("Projecto", "Project")} EMERGE (Horizon Europe, '
-                f'GA 101118278) · {T("Dados", "Data")}: ERA5 (ECMWF/Copernicus) {T("e", "and")} CAMS via Open-Meteo</div>',
+                f'GA 101118278) · {T("Dados", "Data")}: ERA5 (ECMWF/Copernicus), Mabote 2015–2025</div>',
                 unsafe_allow_html=True)
     to_top()

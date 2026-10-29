@@ -1,4 +1,4 @@
-"""RESILIA 72H — energia que não apaga quando o clima aperta / power that stays on when the weather turns.
+"""RESILIA — mini-rede solar resiliente e eficiente para Mabote (Inhambane).
 
 Executar / Run:  streamlit run app.py
 """
@@ -10,22 +10,10 @@ from ui import style
 from ui.i18n import T
 
 _LOGO = Path(__file__).with_name("logo.png")
-st.set_page_config(page_title="RESILIA 72H", page_icon=str(_LOGO) if _LOGO.exists() else ":material/bolt:",
+st.set_page_config(page_title="RESILIA", page_icon=str(_LOGO) if _LOGO.exists() else ":material/solar_power:",
                    layout="wide", initial_sidebar_state="expanded")
 style.inject()
 style.lang_switch()
-
-
-def _explore(view):
-    """Página de exploração: painel lateral + contexto partilhado."""
-    def page():
-        from views import controls
-        style.brand()
-        ctx = controls.build()
-        view.render(ctx)
-        style.footer()
-    page.__name__ = f"page_{view.__name__.split('.')[-1]}"
-    return page
 
 
 def pitch_page():
@@ -34,22 +22,22 @@ def pitch_page():
     pitch.render()
 
 
-def make_pages():
-    from views import business, lab, method, optimizer, scale, simulator
-    return [
-        st.Page(pitch_page, title=T("Apresentação", "Pitch"), icon=":material/co_present:",
-                url_path="apresentacao", default=True),
-        st.Page(_explore(simulator), title=T("Simulador 72 h", "72-h Simulator"), icon=":material/thunderstorm:",
-                url_path="simulador"),
-        st.Page(_explore(lab), title=T("Laboratório do clima", "Climate lab"), icon=":material/science:",
-                url_path="laboratorio"),
-        st.Page(_explore(optimizer), title=T("Dimensionar", "System sizing"), icon=":material/tune:",
-                url_path="dimensionar"),
-        st.Page(_explore(scale), title=T("3 países", "3 countries"), icon=":material/public:", url_path="paises"),
-        st.Page(_explore(business), title=T("Negócio", "Business"), icon=":material/payments:", url_path="negocio"),
-        st.Page(_explore(method), title=T("Método e dados", "Method & data"), icon=":material/menu_book:",
-                url_path="metodo"),
-    ]
+def simulator_page():
+    from views import panel, simulator
+    style.brand()
+    simulator.render(panel.build(show_system=True))
+    style.footer()
 
 
-st.navigation(make_pages(), position="top").run()
+def sizing_page():
+    from views import panel, sizing
+    style.brand()
+    sizing.render(panel.build(show_system=False))
+    style.footer()
+
+
+st.navigation([
+    st.Page(pitch_page, title=T("Apresentação", "Pitch"), icon=":material/co_present:", url_path="apresentacao", default=True),
+    st.Page(simulator_page, title=T("Simulador 24 h", "24-h simulator"), icon=":material/solar_power:", url_path="simulador"),
+    st.Page(sizing_page, title=T("Dimensionamento", "System sizing"), icon=":material/tune:", url_path="dimensionamento"),
+], position="top").run()

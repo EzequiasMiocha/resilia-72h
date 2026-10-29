@@ -7,14 +7,10 @@ from __future__ import annotations
 
 import streamlit as st
 
-from resilia.sites import EVENTS, EVENTS_EN, SITES, SITES_EN
-
 MONTHS = {"PT": ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro",
                  "Outubro", "Novembro", "Dezembro"],
           "EN": ["January", "February", "March", "April", "May", "June", "July", "August", "September",
                  "October", "November", "December"]}
-WEEKDAYS = {"PT": ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"],
-            "EN": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]}
 
 
 def lang() -> str:
@@ -35,33 +31,24 @@ def num(x, n=0) -> str:
     return s if en() else s.replace(",", " ").replace(".", ",")
 
 
-def month_short(m: int) -> str:
-    return MONTHS[lang()][m - 1][:3]
+def date_txt(ts) -> str:
+    m = MONTHS[lang()][ts.month - 1]
+    return f"{ts.day} {m} {ts.year}" if en() else f"{ts.day} de {m} de {ts.year}"
 
 
-def date_long(ts) -> str:
-    L = lang()
-    if L == "EN":
-        return f"{WEEKDAYS[L][ts.dayofweek]}, {ts.day} {MONTHS[L][ts.month - 1]} · {ts.hour:02d}:00"
-    return f"{WEEKDAYS[L][ts.dayofweek]}, {ts.day} de {MONTHS[L][ts.month - 1]} · {ts.hour:02d}:00"
+DAY_LABELS = {
+    "sunny": ("Dia de sol", "Sunny day"),
+    "partly": ("Parcialmente nublado", "Partly cloudy"),
+    "cloudy": ("Dia nublado", "Cloudy day"),
+    "storm": ("Chuva forte", "Heavy rain"),
+    "hot": ("Dia muito quente", "Very hot day"),
+}
 
 
-def site(key: str, field: str) -> str:
-    if en() and field in SITES_EN.get(key, {}):
-        return SITES_EN[key][field]
-    return SITES[key][field]
+def day_label(k: str) -> str:
+    return T(*DAY_LABELS[k])
 
 
-def event(key: str, field: str = "name") -> str:
-    if en() and field in EVENTS_EN.get(key, {}):
-        return EVENTS_EN[key][field]
-    return EVENTS[key][field]
-
-
-PHASE = {"preparação": ("antes (aviso)", "before (warning)"), "evento": ("evento", "event"),
-         "recuperação": ("recuperação", "recovery"), "normal": ("normal", "normal"), "alerta": ("alerta", "alert")}
-
-
-def phase(p: str) -> str:
-    a, b = PHASE.get(p, (p, p))
-    return T(a, b)
+def verdict_txt(v: str) -> str:
+    return {"ok": T("RESILIENTE", "RESILIENT"), "partial": T("PARCIALMENTE RESILIENTE", "PARTIALLY RESILIENT"),
+            "fragile": T("FRÁGIL", "FRAGILE")}[v]

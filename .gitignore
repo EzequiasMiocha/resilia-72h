@@ -7,3 +7,6 @@ venv/
 .streamlit/secrets.toml
 # locais descarregados pela funcionalidade «qualquer aldeia» (gerados em tempo de execução)
 data/custom_*.csv.gz
+
+# referência local da versão antiga
+app_antigo.py
