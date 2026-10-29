@@ -9,6 +9,8 @@ from ui import charts
 from ui.i18n import T, cut_txt, day_label, num, verdict_txt
 from ui.style import C, card, explain, page_header
 
+from .panel import get_year
+
 VCOL = {"ok": "#16A34A", "partial": "#B45309", "fragile": C["red"]}
 
 
@@ -73,10 +75,14 @@ def render(ctx):
     m = M.day_metrics(o, s)
     v = M.verdict(m["risk"], m["hours"])
     m_ghi = res.loc[o.index, "ghi"].sum() / 1000
-    st.caption(T(f"Um dia real de Mabote · sol: {num(m_ghi, 1)} kWh/m² · produção solar: {num(m['pv'])} kWh · "
-                 f"procura: {num(m['demand'])} kWh",
-                 f"A real Mabote day · sun: {num(m_ghi, 1)} kWh/m² · solar output: {num(m['pv'])} kWh · "
-                 f"demand: {num(m['demand'])} kWh"))
+    sun_eve = M.eve(res, day)
+    eve_txt = T("normal", "normal") if sun_eve >= 0.8 * (res["ghi"].sum() / 1000 / (len(res) / 24)) else T("fraca", "weak")
+    st.caption(T(f"Um dia real de Mabote · sol: **{num(m_ghi, 1)} kWh/m²** · produção solar: {num(m['pv'])} kWh · "
+                 f"procura: {num(m['demand'])} kWh · **véspera {eve_txt}** (sol {num(sun_eve, 1)} kWh/m²): a bateria "
+                 f"começou o dia com **{num(100 * o['soc'].iloc[0])} %**",
+                 f"A real Mabote day · sun: **{num(m_ghi, 1)} kWh/m²** · solar output: {num(m['pv'])} kWh · "
+                 f"demand: {num(m['demand'])} kWh · **{eve_txt} day before** (sun {num(sun_eve, 1)} kWh/m²): the battery "
+                 f"started the day at **{num(100 * o['soc'].iloc[0])} %**"))
 
     c = st.columns(4)
     with c[0]:
@@ -104,6 +110,19 @@ def render(ctx):
               "The black part is energy that was missing (interruption). Bars below zero are surplus stored in the battery. "
               "The dark line is demand and the dotted red line is the battery charge."))
 
+    # dias seguidos: a bateria passa de um dia para o outro
+    st.markdown(f"### {T('Quatro dias reais seguidos: do sol forte à chuva forte', 'Four real days in a row: from strong sun to heavy rain')}")
+    st.caption(T("A bateria não começa cada dia do zero: o que o sol guarda num dia serve para os seguintes. Siga a linha "
+                 "da bateria em baixo para ver quando enche e quando se esgota.",
+                 "The battery does not start each day from zero: what the sun stores one day serves the next. Follow the "
+                 "battery line at the bottom to see when it fills and when it runs out."))
+    seq = M.simulate_period(res, D, s, M.SEQUENCE["start"], len(M.SEQUENCE["days"]))
+    seq_sun = [res.loc[seq.index[24 * j:24 * (j + 1)], "ghi"].sum() / 1000 for j in range(len(M.SEQUENCE["days"]))]
+    seq_lab = [T("Sol forte", "Strong sun"), T("Algumas nuvens", "Some clouds"), T("Nublado e chuva", "Cloudy and rain"),
+               T("Chuva forte", "Heavy rain")]
+    st.plotly_chart(charts.sequence([(f"{T('Este sistema', 'This system')} · {num(s.pv)} kWp · {num(s.bat)} kWh", seq)],
+                                    seq_lab, seq_sun, height=560), width="stretch")
+
     # teste de resiliência: o mesmo sistema nos 5 tipos de dia
     st.markdown(f"### {T('Teste de resiliência em 24 horas', '24-hour resilience test')}")
     st.caption(T("O mesmo sistema, testado nos 5 tipos de dia reais. «Sem cortes» = a aldeia teve luz nas 24 horas. "
@@ -120,6 +139,15 @@ def render(ctx):
                   f'<div class="n" style="color:{col};font-size:24px">{cut_txt(mm["hours"])}</div>'
                   f'<div class="u">{T("energia em falta", "energy missing")}: {num(mm["risk"], 1)} %</div></div>')
     st.markdown(f'<div class="big" style="grid-template-columns:repeat(5,1fr)">{cells}</div>', unsafe_allow_html=True)
+    fy, _ = get_year(ctx.village, float(s.pv), float(s.bat))
+    vy = "ok" if fy["ok_days"] >= 98 else ("partial" if fy["ok_days"] >= 90 else "fragile")
+    st.markdown(f'<div class="resil" style="border-color:{VCOL[vy]}"><div class="big-n" style="color:{VCOL[vy]}">'
+                f'{num(fy["ok_days"], 1)} %</div><div>' + T(
+                    f"<b>Este sistema foi resiliente em {num(fy['ok_days'], 1)} % dos dias reais</b>: nesses dias a aldeia teve "
+                    f"luz o dia inteiro, sem nenhum corte. Em média, há <b>{num(fy['cut_days'])} dias por ano</b> com algum corte.",
+                    f"<b>This system was resilient on {num(fy['ok_days'], 1)} % of the real days</b>: on those days the village had "
+                    f"power all day, with no cuts. On average there are <b>{num(fy['cut_days'])} days per year</b> with some cut.")
+                + "</div></div>", unsafe_allow_html=True)
 
     st.plotly_chart(charts.demand_profile(ctx.dem.loc[o.index], T("A procura neste dia, por serviço",
                                                                     "Demand on this day, by service")), width="stretch")

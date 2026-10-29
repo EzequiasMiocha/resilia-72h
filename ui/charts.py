@@ -52,7 +52,76 @@ def balance24(o: pd.DataFrame, title, ymax=None, height=440, legend=True):
     return fig
 
 
-SERVICE_COLORS = dict(homes="#E8A33D", street="#94A3B8", health=C["red"], school="#2563EB", water="#0EA5E9", mill="#6B7280")
+def sequence(outs, labels, suns, height=None):
+    """Vários dias seguidos no mesmo eixo do tempo.
+
+    outs: lista de (nome, resultado da simulação). Uma faixa de barras por sistema (de onde veio a energia em cada
+    hora) e, por baixo, uma faixa com a carga da bateria de todos os sistemas, para se ver quando enche e quando esgota.
+    """
+    n = len(outs)
+    nd = len(labels)
+    titles = [nm for nm, _ in outs] + [T("Carga da bateria (%)", "Battery charge (%)")]
+    fig = make_subplots(rows=n + 1, cols=1, shared_xaxes=True, vertical_spacing=0.11, subplot_titles=titles,
+                        row_heights=[1.0] * n + [0.8])
+    lo = min(-o["bat_ch"].max() for _, o in outs) * 1.1
+    hi = max(max(o["demand"].max(), (o["direct"] + o["bat_dis"] + o["unmet"]).max()) for _, o in outs) * 1.15
+    bat_cols = ["#9AA3AF", C["red"]] if n == 2 else [C["red"]]
+    for i, (nm, o) in enumerate(outs, start=1):
+        x = np.arange(len(o))
+        first = i == 1
+        for col, y, name, color in [("direct", o["direct"], T("Sol", "Solar"), C["solar"]),
+                                    ("bat_dis", o["bat_dis"], T("Bateria", "Battery"), C["bat"]),
+                                    ("unmet", o["unmet"], T("Sem luz (energia em falta)", "No power (energy missing)"), C["unmet"]),
+                                    ("bat_ch", -o["bat_ch"], T("Sol guardado na bateria", "Sun stored in battery"), "rgba(242,169,0,.38)")]:
+            fig.add_trace(go.Bar(x=x, y=y, name=name, marker_color=color, showlegend=first, legendgroup=col,
+                                 hovertemplate="%{y:.1f} kW<extra>" + name + "</extra>"), row=i, col=1)
+        fig.add_trace(go.Scatter(x=x, y=o["demand"], name=T("Procura da aldeia", "Village demand"), mode="lines",
+                                 line=dict(color="#1F2933", width=2), showlegend=first, legendgroup="dem",
+                                 hovertemplate="%{y:.1f} kW<extra>" + T("Procura", "Demand") + "</extra>"), row=i, col=1)
+        fig.update_yaxes(title_text="kW", range=[lo, hi], row=i, col=1)
+        # resultado de cada dia, escrito por cima da faixa
+        for k in range(nd):
+            od = o.iloc[24 * k:24 * (k + 1)]
+            h = int((od["unmet"] > 0.01 * od["demand"]).sum())
+            txt = T("sem cortes", "no cuts") if h == 0 else T(f"{h} h sem luz", f"{h} h without power")
+            fig.add_annotation(x=24 * k + 11.5, y=1.0, xref="x", yref=f"y{'' if i == 1 else i} domain", yanchor="bottom",
+                               text=f"<b>{txt}</b>", showarrow=False,
+                               font=dict(size=12.5, color="#16A34A" if h == 0 else C["red"]))
+        fig.add_trace(go.Scatter(x=x, y=100 * o["soc"], name=f"{T('Bateria', 'Battery')} · {nm}", mode="lines",
+                                 line=dict(color=bat_cols[i - 1], width=3), legendgroup=f"soc{i}",
+                                 hovertemplate="%{y:.0f} %<extra>" + nm + "</extra>"), row=n + 1, col=1)
+    fig.add_hline(y=100 * SOC_MIN_UI, line=dict(color="#6B7280", width=1, dash="dot"), row=n + 1, col=1,
+                  annotation_text=T("mínimo 20 %", "minimum 20 %"), annotation_position="bottom right",
+                  annotation_font=dict(size=11, color="#6B7280"))
+    fig.update_yaxes(range=[0, 105], tickvals=[0, 20, 50, 100], title_text="%", row=n + 1, col=1)
+    # faixas dos dias e nomes dos dias
+    for k in range(nd):
+        if k % 2 == 1:
+            fig.add_vrect(x0=24 * k - 0.5, x1=24 * (k + 1) - 0.5, fillcolor="#F1F3F6", line_width=0, layer="below",
+                          row="all", col=1)
+        if k:
+            fig.add_vline(x=24 * k - 0.5, line=dict(color="#C3C8D0", width=1.2), row="all", col=1)
+        fig.add_annotation(x=24 * k + 11.5, y=1.0, xref="x", yref="paper", yanchor="bottom", yshift=44, showarrow=False,
+                           text=f"<b>{T('Dia', 'Day')} {k + 1} · {labels[k]}</b><br>"
+                                f"<span style='font-size:11.5px;color:#6B7280'>{T('sol', 'sun')}: {num(suns[k], 1)} kWh/m²</span>",
+                           font=dict(size=13.5, color="#1F2933"))
+    ticks = [24 * k + h for k in range(nd) for h in (0, 6, 12, 18)]
+    fig.update_xaxes(tickmode="array", tickvals=ticks, ticktext=[f"{t % 24:02d}h" for t in ticks],
+                     range=[-0.6, 24 * nd - 0.4], row=n + 1, col=1)
+    fig.update_layout(barmode="relative", bargap=0.08)
+    base(fig, None, height=height or (300 * n + 260))
+    fig.update_layout(margin=dict(t=100, b=70, l=55, r=20), hovermode="x unified",
+                      legend=dict(orientation="h", y=-0.07, yanchor="top", x=0, font=dict(size=12)))
+    for a in fig.layout.annotations[:len(titles)]:            # títulos das faixas à esquerda, numa linha própria
+        a.update(x=0, xanchor="left", yshift=20, font=dict(size=13.5, color="#1F2933"))
+        a.update(text=f"<b>{a.text}</b>")
+    return fig
+
+
+SOC_MIN_UI = 0.20
+
+
+SERVICE_COLORS =dict(homes="#E8A33D", street="#94A3B8", health=C["red"], school="#2563EB", water="#0EA5E9", mill="#6B7280")
 
 
 def service_names():

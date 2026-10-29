@@ -22,7 +22,7 @@ def get_demand(village: tuple):
 @st.cache_data(show_spinner=f"A testar {M.N_SYSTEMS} sistemas em dias reais de Mabote… / "
                             f"Testing {M.N_SYSTEMS} systems on real Mabote days…",
                persist="disk")
-def get_long_term(village: tuple, version: int = 3):
+def get_long_term(village: tuple, version: int = 4):
     res, _ = get_resource()
     return M.long_term(res, get_demand(village)["total"].values)
 

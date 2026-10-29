@@ -28,7 +28,8 @@ Grupo 36 (UEM) · EMERGE Final Hackathon.
 - **Apresentação** (página inicial, 6 diapositivos, cronómetro e notas do orador)
 - **Energia solar** (o caminho da energia em 4 passos, indicadores de energia limpa, fluxo anual, sol ao longo do ano, glossário)
 - **Simulador 24 h**
-- **Dimensionamento**
+- **Dimensionamento** (inclui a percentagem de dias resilientes)
+- **Metodologia** (como calculamos a energia renovável: recurso solar, produção, procura, bateria, dimensionamento e indicadores)
 
 A plataforma é bilingue (PT/EN): selector no canto superior direito ou `?lang=EN` no endereço.
 

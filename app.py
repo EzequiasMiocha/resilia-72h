@@ -43,9 +43,18 @@ def sizing_page():
     style.footer()
 
 
+def method_page():
+    from views import method
+    style.hide_sidebar()
+    style.brand()
+    method.render()
+    style.footer()
+
+
 st.navigation([
     st.Page(pitch_page, title=T("Apresentação", "Pitch"), icon=":material/co_present:", url_path="apresentacao", default=True),
     st.Page(solar_page, title=T("Energia solar", "Solar energy"), icon=":material/wb_sunny:", url_path="energia-solar"),
     st.Page(simulator_page, title=T("Simulador 24 h", "24-h simulator"), icon=":material/solar_power:", url_path="simulador"),
     st.Page(sizing_page, title=T("Dimensionamento", "System sizing"), icon=":material/tune:", url_path="dimensionamento"),
+    st.Page(method_page, title=T("Metodologia", "Methodology"), icon=":material/functions:", url_path="metodologia"),
 ], position="top").run()

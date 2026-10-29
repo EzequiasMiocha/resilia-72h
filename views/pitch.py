@@ -25,21 +25,24 @@ SLIDES = [
      "pensado só para o dia médio (a aldeia fica às escuras). Mostrem os números.",
      "Where we are (Mabote, no grid), the problem (the sun changes every day) and what happens if the system is designed "
      "only for the average day (the village goes dark). Show the numbers."),
-    ("objectivo", "Desafio e objectivo", "Challenge and objective", 60,
+    ("objectivo", "Desafio e objectivo", "Challenge and objective", 55,
      "À esquerda, o desafio do EMERGE em três linhas. À direita, o nosso objectivo numa frase. Expliquem porque o "
      "sistema é só solar: o vento de Mabote é fraco para gerar energia.",
      "Left: the EMERGE challenge in three lines. Right: our objective in one sentence. Explain why the system is solar "
      "only: Mabote's wind is too weak to generate power."),
-    ("como", "Como respondemos", "How we answer", 45,
-     "Cada exigência do desafio e onde está na plataforma. Terminem com a regra do balanço de cada hora.",
-     "Each requirement of the challenge and where it is in the platform. End with the hourly balance rule."),
-    ("balanco", "Balanço 24 h", "24-h balance", 90,
-     "Mudem o tipo de dia. À esquerda o sistema só eficiente, à direita o resiliente. Mostrem a parte preta (energia em falta).",
-     "Change the type of day. Left: efficiency-only system; right: resilient. Point to the black part (energy missing)."),
-    ("resiliente", "Resiliente e eficiente", "Resilient and efficient", 80,
-     "Os números por ano: dias maus e horas sem energia. Depois o teste nos 5 tipos de dia.",
-     "The yearly numbers: bad days and hours without power. Then the test on the 5 day types."),
-    ("conclusao", "Conclusão", "Conclusion", 40,
+    ("metodo", "Metodologia", "Methodology", 55,
+     "Os 5 passos, da esquerda para a direita: sol real → produção dos painéis → procura → bateria e balanço de cada "
+     "hora → dimensionamento resiliente. Uma frase por passo.",
+     "The 5 steps, left to right: real sun → panel output → demand → battery and hourly balance → resilient sizing. "
+     "One sentence per step."),
+    ("balanco", "Dias seguidos", "Days in a row", 90,
+     "Quatro dias reais seguidos. Sigam a linha da bateria: os dias 1 e 2 enchem-na; no dia 3 o sistema pequeno já não "
+     "enche; no dia 4 fica às escuras e o resiliente aguenta com a reserva.",
+     "Four real days in a row. Follow the battery line: days 1 and 2 fill it; on day 3 the small system no longer fills "
+     "it; on day 4 it goes dark while the resilient one holds on with its reserve."),
+    ("resiliente", "Resiliente e eficiente", "Resilient and efficient", 75,
+     "Digam a frase do título: resiliente em 98,6 % dos dias. Depois os números por ano e o teste nos 5 tipos de dia.",
+     "Say the title sentence: resilient on 98.6 % of days. Then the yearly numbers and the 5 day-type test."),    ("conclusao", "Conclusão", "Conclusion", 40,
      "O que entregamos, o resultado, como se mantém e se replica, e o próximo passo. Frase final.",
      "What we deliver, the result, how it is sustained and replicated, and the next step. Closing line."),
 ]
@@ -51,7 +54,7 @@ def _title(k):
 
 
 @st.cache_data(show_spinner=False)
-def pitch_data(version=4):
+def pitch_data(version=5):
     res, days = get_resource()
     D = get_demand(VILLAGE)["total"].values
     ch = presets(VILLAGE)
@@ -69,7 +72,13 @@ def pitch_data(version=4):
         s = M.System(pv=row["pv"], bat=row["bat"])
         test[name] = {k: M.day_metrics(M.simulate_day(res, D, s, days[k]), s) for k in M.DAY_TYPES}
     imp = get_year(VILLAGE, float(r["pv"]), float(r["bat"]))[1]
-    return dict(e=e, r=r, imp=imp, weak_per_year=weak.sum() / (len(daily) / 365.25), weak_run=best,
+    seq = {}
+    for name, row in (("e", e), ("r", r)):
+        s = M.System(pv=row["pv"], bat=row["bat"])
+        seq[name] = M.simulate_period(res, D, s, M.SEQUENCE["start"], len(M.SEQUENCE["days"]))
+    o0 = seq["e"]
+    seq_sun = [res.loc[o0.index[24 * k:24 * (k + 1)], "ghi"].sum() / 1000 for k in range(len(M.SEQUENCE["days"]))]
+    return dict(e=e, r=r, imp=imp, seq=seq, seq_sun=seq_sun, weak_per_year=weak.sum() / (len(daily) / 365.25), weak_run=best,
                 dem_mean=dd.mean(), dem_min=dd.quantile(0.02), dem_max=dd.quantile(0.98), test=test,
                 sun_min=daily.quantile(0.02) / 1000, sun_max=daily.quantile(0.98) / 1000, wind_mean=res["v"].mean())
 
@@ -191,64 +200,72 @@ def s_objectivo(d):
 </div>""")
 
 
-def s_como(d):
-    rows = [
-        (T("Entradas", "Inputs"), T("sol, vento, bateria, procura", "solar, wind, battery, demand"),
-         T("Painel lateral: painéis solares (kWp), baterias (kWh), número de famílias e serviços. O sol e o vento reais variam hora a hora.",
-           "Side panel: solar panels (kWp), batteries (kWh), number of households and services. Real sun and wind vary hour by hour.")),
-        (T("Balanço em 24 horas", "24-hour balance"), T("oferta × procura", "supply × demand"),
-         T("<b>Simulador 24 h:</b> hora a hora (00–23 h), em dias reais de sol, nuvens, chuva e calor.",
-           "<b>24-hour simulator:</b> hour by hour (00–23 h), on real sunny, cloudy, rainy and hot days.")),
-        (T("Risco de interrupção", "Interruption risk"), T("saída", "output"),
-         T("Energia em falta (%), horas sem energia e carga da bateria ao longo do dia.",
-           "Energy missing (%), hours without power and battery charge through the day.")),
-        (T("Resiliência, não só eficiência", "Resilience, not just efficiency"), T("diferencial", "twist"),
-         T(f"<b>Dimensionamento:</b> {M.N_SYSTEMS} sistemas testados em milhares de dias reais; o mais barato que aguenta os dias maus.",
-           f"<b>Sizing:</b> {M.N_SYSTEMS} systems tested on thousands of real days; the cheapest that withstands bad days.")),
-        (T("Modelo em folha de cálculo", "Spreadsheet model"), T("ferramenta simples", "simple tool"),
-         T("A tabela hora a hora exporta para Excel.", "The hourly table exports to Excel.")),
+def _step_card(n, ic, title, text, formula):
+    return (f'<div class="m"><div class="top"><span class="no">{n}</span>{icon(ic, 26, "#C8102E", 2)}</div>'
+            f'<div class="h">{title}</div><div class="x">{text}</div><div class="f">{formula}</div></div>')
+
+
+def s_metodo(d):
+    cards = [
+        _step_card(1, "sun", T("Recurso solar", "Solar resource"),
+                   T("Sol real de Mabote, hora a hora (satélite ERA5). Convertido para painéis inclinados a 22°, virados a norte.",
+                     "Real Mabote sun, hour by hour (ERA5 satellite data). Converted to panels tilted 22°, facing north."),
+                   T("sol no painel = directo + difuso + reflectido", "sun on panel = direct + diffuse + reflected")),
+        _step_card(2, "panel", T("Produção solar", "Solar output"),
+                   T("Os painéis convertem o sol em electricidade. O calor reduz a produção; o vento arrefece os painéis.",
+                     "Panels turn sunlight into electricity. Heat lowers output; wind cools the panels."),
+                   T("kW = kWp × sol/1000 × 0,88 × (1 − 0,35 % por °C)", "kW = kWp × sun/1000 × 0.88 × (1 − 0.35 % per °C)")),
+        _step_card(3, "house", T("Procura da aldeia", "Village demand"),
+                   T("Número de famílias × consumo de cada hora + centro de saúde, escola, bomba de água e moagem.",
+                     "Number of households × hourly use + health centre, school, water pump and mill."),
+                   T("varia com a hora, o dia da semana e o calor", "varies with the hour, weekday and heat")),
+        _step_card(4, "battery", T("Bateria e balanço", "Battery and balance"),
+                   T("Em cada hora: o sol serve a aldeia; o que sobra vai para a bateria; o que falta sai da bateria.",
+                     "Every hour: the sun serves the village; the surplus goes to the battery; shortfalls come from it."),
+                   T("eficiência 95 % · nunca abaixo de 20 %", "95 % efficiency · never below 20 %")),
+        _step_card(5, "shield", T("Dimensionamento resiliente", "Resilient sizing"),
+                   T(f"{M.N_SYSTEMS} sistemas testados em milhares de dias reais seguidos. Escolhe o mais barato que não deixa a aldeia às escuras.",
+                     f"{M.N_SYSTEMS} systems tested on thousands of real consecutive days. Picks the cheapest that keeps the lights on."),
+                   T("resiliência obrigatória → depois o menor custo", "resilience required → then lowest cost")),
     ]
-    body = "".join(f"<tr><td>{a}<span class='w'>{w}</span></td><td>{b}</td></tr>" for a, w, b in rows)
+    maps = [(T("Entradas", "Inputs"), T("painel lateral", "side panel")), (T("Balanço 24 h", "24-h balance"), T("Simulador", "Simulator")),
+            (T("Risco de interrupção", "Interruption risk"), T("horas sem luz", "hours without power")),
+            (T("Resiliência", "Resilience"), T("Dimensionamento", "Sizing")), (T("Folha de cálculo", "Spreadsheet"), "Excel")]
+    chips = "".join(f'<span class="chip">{a} → <b>{b}</b></span>' for a, b in maps)
     _slide(f"3 · {_title(2)}", f"""
-<h2>{T("Como respondemos ao desafio", "How we answer the challenge")}</h2>
-<table class="map"><tr><th>{T("O desafio pede", "The challenge asks for")}</th><th>{T("Na plataforma", "In the platform")}</th></tr>{body}</table>
-<div class="lead" style="margin-top:16px;font-size:18px">{T(
- "<b>Em cada hora:</b> o sol serve a aldeia → o excedente carrega a bateria → o que falta sai da bateria → o resto é <b class='red'>energia em falta</b>.",
- "<b>Every hour:</b> the sun serves the village → surplus charges the battery → shortfalls come from the battery → the rest is <b class='red'>energy missing</b>.")}</div>""")
+<h2>{T("Como calculamos a energia renovável, em 5 passos", "How we calculate the renewable energy, in 5 steps")}</h2>
+<div class="method">{"".join(cards)}</div>
+<div style="margin-top:14px;font-size:14px;color:#6B7280;font-weight:700;letter-spacing:.06em;text-transform:uppercase">{T("Onde está cada pedido do desafio", "Where each challenge requirement is")}</div>
+<div style="margin-top:6px">{chips}</div>""")
 
 
 def s_balanco(d):
-    res, days = get_resource()
-    D = get_demand(VILLAGE)["total"].values
-    _slide(f"4 · {_title(3)}", f'<h2>{T("O mesmo dia, dois sistemas: 24 horas de oferta e procura", "The same day, two systems: 24 hours of supply and demand")}</h2>',
+    e, r, seq = d["e"], d["r"], d["seq"]
+    labels = [T("Sol forte", "Strong sun"), T("Algumas nuvens", "Some clouds"), T("Nublado e chuva", "Cloudy and rain"),
+              T("Chuva forte", "Heavy rain")]
+    _slide(f"4 · {_title(3)}", f'<h2>{T("Quatro dias reais seguidos: do sol forte à chuva forte", "Four real days in a row: from strong sun to heavy rain")}</h2>'
+           f'<div class="lead" style="font-size:16px">{T("O mesmo tempo para os dois sistemas. A bateria passa de um dia para o outro: siga a linha da bateria em baixo.", "The same weather for both systems. The battery carries over from one day to the next: follow the battery line at the bottom.")}</div>',
            cls="slide compact")
-    st.session_state.setdefault("p_day", "storm")
-    k = st.segmented_control(T("Tipo de dia", "Type of day"), M.DAY_TYPES, key="p_day", format_func=day_label) or "storm"
-    cols = st.columns(2)
-    outs = []
-    for (name, row), col in zip(((T("Só eficiência", "Efficiency only"), d["e"]), (T("Resiliente", "Resilient"), d["r"])), cols):
-        s = M.System(pv=row["pv"], bat=row["bat"])
-        o = M.simulate_day(res, D, s, days[k])
-        outs.append((name, row, s, o, M.day_metrics(o, s)))
-    peak = max(max(o["demand"].max(), o["bat_ch"].max() / 0.75) for _, _, _, o, _ in outs)
-    for (name, row, s, o, m), col in zip(outs, cols):
-        v = M.verdict(m["risk"], m["hours"])
-        with col:
-            st.markdown(f"<div style='font-size:15px;font-weight:800'>{name} · <span style='color:#6B7280;font-weight:600'>{_sys(row)}</span></div>"
-                        f"<div style='font-size:22px;font-weight:800;color:{hcol(m)}'>"
-                        f"{cut_txt(m['hours']).capitalize()} · {verdict_txt(v)}"
-                        f"<span style='font-size:14px;color:#6B7280;font-weight:600'> &nbsp;({T('energia em falta', 'energy missing')}: {num(m['risk'], 1)} %)</span></div>",
-                        unsafe_allow_html=True)
-            st.plotly_chart(charts.balance24(o, None, ymax=peak, height=340, legend=False), width="stretch")
-    st.markdown(f'<div class="lead" style="font-size:15px">{T("Amarelo = sol · azul = bateria · <b>preto = sem energia</b> · linha escura = procura · linha vermelha pontilhada = carga da bateria (escala da direita).", "Yellow = solar · blue = battery · <b>black = no power</b> · dark line = demand · dotted red line = battery charge (right scale).")}</div>',
-                unsafe_allow_html=True)
-    st.markdown(f'<div class="plain" style="font-size:15.5px;margin-top:8px"><div class="h">{T("Como ler, em 3 momentos", "How to read it, in 3 moments")}</div>' + T(
-        "<b>1 · Noite:</b> só a bateria dá energia. Se começou o dia vazia, a aldeia fica às escuras (preto). "
-        "<b>2 · Meio-dia:</b> o sol serve a aldeia e o que sobra enche a bateria (barras claras abaixo do zero). Mais painéis = bateria mais cheia. "
-        "<b>3 · Fim da tarde e noite:</b> a bateria tem de aguentar até de manhã. Nos dias maus, o sistema resiliente consegue; o «só eficiência» esvazia e corta.",
-        "<b>1 · Night:</b> only the battery supplies power. If it started the day empty, the village goes dark (black). "
-        "<b>2 · Midday:</b> the sun serves the village and the rest fills the battery (light bars below zero). More panels = fuller battery. "
-        "<b>3 · Evening and night:</b> the battery must last until morning. On bad days, the resilient system does; the efficiency-only one runs out and cuts.")
+    oe, orr = seq["e"], seq["r"]
+    fig = charts.sequence([(f"{T('Só eficiência', 'Efficiency only')} · {_sys(e)}", oe),
+                           (f"{T('Resiliente', 'Resilient')} · {_sys(r)}", orr)], labels, d["seq_sun"], height=660)
+    st.plotly_chart(fig, width="stretch")
+
+    def day(o, k):
+        od = o.iloc[24 * k:24 * (k + 1)]
+        return int((od["unmet"] > 0.01 * od["demand"]).sum()), 100 * od["soc"].max(), 100 * od["soc"].iloc[-1]
+    h3e, max3e, _ = day(oe, 2)
+    h4e, _, _ = day(oe, 3)
+    h4r, _, end4r = day(orr, 3)
+    st.markdown(f'<div class="plain" style="font-size:15.5px;margin-top:4px"><div class="h">{T("Como ler", "How to read it")}</div>' + T(
+        f"<b>Dias 1 e 2 · sol:</b> os painéis enchem a bateria dos dois sistemas (a linha sobe até 100 %). "
+        f"<b>Dia 3 · nuvens e chuva:</b> o sistema pequeno já não enche a bateria (só chega a {num(max3e)} %) e à noite fica "
+        f"{h3e} h sem luz. <b>Dia 4 · chuva forte:</b> o sistema pequeno fica <b>{h4e} horas às escuras</b>. O resiliente usa a "
+        f"reserva que guardou nos dias de sol e <b>não corta nenhuma hora</b> (a bateria acaba o dia em {num(end4r)} %).",
+        f"<b>Days 1 and 2 · sun:</b> the panels fill both batteries (the line rises to 100 %). "
+        f"<b>Day 3 · clouds and rain:</b> the small system no longer fills its battery (only {num(max3e)} %) and at night loses "
+        f"power for {h3e} h. <b>Day 4 · heavy rain:</b> the small system is <b>dark for {h4e} hours</b>. The resilient one uses the "
+        f"reserve it stored on the sunny days and <b>does not cut a single hour</b> (the battery ends the day at {num(end4r)} %).")
         + "</div>", unsafe_allow_html=True)
 
 
@@ -261,12 +278,18 @@ def s_resiliente(d):
                   f'<div class="u" style="color:{hcol(a)};font-weight:700">{T("Só eficiência", "Efficiency")}: {cut_txt(a["hours"])}</div>'
                   f'<div class="u" style="color:{hcol(b)};font-weight:800">{T("Resiliente", "Resilient")}: {cut_txt(b["hours"])}</div></div>')
     _slide(f"5 · {_title(4)}", f"""
-<h2>{T("Testado em dias reais: resiliente e eficiente.", "Tested on real days: resilient and efficient.")}</h2>
+<h2>{T(f"O nosso sistema foi resiliente em <span class='red'>{num(r['ok_days'], 1)} % dos dias</span> reais.",
+       f"Our system was resilient on <span class='red'>{num(r['ok_days'], 1)} % of the</span> real days.")}</h2>
+<div class="lead" style="font-size:17px">{T(
+ f"Em {num(r['ok_days'], 1)} % dos dias, a aldeia teve luz <b>o dia inteiro, sem nenhum corte</b>. O sistema «só eficiência» "
+ f"conseguiu-o em {num(e['ok_days'], 1)} % dos dias.",
+ f"On {num(r['ok_days'], 1)} % of days, the village had power <b>all day, with no cuts at all</b>. The efficiency-only system "
+ f"managed it on {num(e['ok_days'], 1)} % of days.")}</div>
 <div class="big">
-  <div class="k"><div class="n red">{num(e['bad_days'])} → {num(r['bad_days'], 1)}</div><div class="u">{T("dias maus por ano (mais de 10 % de energia em falta)",
-   "bad days per year (more than 10 % energy missing)")}</div></div>
-  <div class="k"><div class="n red">{num(e['hours'])} h → {num(r['hours'])} h</div><div class="u">{T("horas com interrupção por ano",
-   "hours with interruption per year")}</div></div>
+  <div class="k"><div class="n red">{num(e['cut_days'])} → {num(r['cut_days'])}</div><div class="u">{T("dias por ano com algum corte",
+   "days per year with any cut")}</div></div>
+  <div class="k"><div class="n red">{num(e['hours'])} h → {num(r['hours'])} h</div><div class="u">{T("horas sem luz por ano",
+   "hours without power per year")}</div></div>
   <div class="k"><div class="n">{num(e['autonomy'])} h → {num(r['autonomy'])} h</div><div class="u">{T("autonomia da bateria sem sol",
    "battery autonomy without sun")}</div></div>
   <div class="k"><div class="n">+{num(100 * (r['cost'] / e['cost'] - 1))} %</div><div class="u">{T(
@@ -306,7 +329,7 @@ def s_conclusao(d):
 <div class="lead" style="font-size:15px;margin-top:8px">{T("Grupo 36", "Team 36")} · Ezequias Miocha · Laura Hele · Suely Muando · Universidade Eduardo Mondlane</div>""")
 
 
-RENDER = dict(contexto=s_contexto, objectivo=s_objectivo, como=s_como, balanco=s_balanco, resiliente=s_resiliente,
+RENDER = dict(contexto=s_contexto, objectivo=s_objectivo, metodo=s_metodo, balanco=s_balanco, resiliente=s_resiliente,
               conclusao=s_conclusao)
 
 

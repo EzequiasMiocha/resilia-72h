@@ -223,6 +223,7 @@ def long_term(res: pd.DataFrame, dem: np.ndarray, grid: dict = GRID) -> pd.DataF
     un_day = np.zeros((nd, m))
     dem_day = np.bincount(days, weights=dem, minlength=nd)
     curt = np.zeros(m); gen = np.zeros(m); hours = np.zeros(m)
+    cut_day = np.zeros((nd, m))                                      # horas sem luz em cada dia
     for t in range(len(dem)):
         d = dem[t]
         re = pv1[t] * P
@@ -236,7 +237,9 @@ def long_term(res: pd.DataFrame, dem: np.ndarray, grid: dict = GRID) -> pd.DataF
         un_day[days[t]] += un
         curt += sur - ch
         gen += re
-        hours += un > 0.01 * d
+        cut = un > 0.01 * d
+        hours += cut
+        cut_day[days[t]] += cut
     years = len(dem) / 8760.0
     day_risk = 100 * un_day / np.maximum(dem_day[:, None], 1e-9)
     out = pd.DataFrame(dict(
@@ -248,6 +251,8 @@ def long_term(res: pd.DataFrame, dem: np.ndarray, grid: dict = GRID) -> pd.DataF
         hours=hours / years,                                         # horas por ano com interrupção
         waste=100 * curt / np.maximum(gen, 1e-9),                    # energia renovável desperdiçada
         autonomy=(1 - SOC_MIN) * B * ETA / dem.mean(),
+        ok_days=100 * (cut_day == 0).sum(0) / nd,                     # % de dias sem nenhuma hora sem luz
+        cut_days=(cut_day > 0).sum(0) / years,                       # dias por ano com algum corte
     ))
     return out
 
@@ -285,6 +290,10 @@ def year_flows(res: pd.DataFrame, dem: np.ndarray, s: System) -> dict:
     days = o.index.normalize()
     daily = pd.DataFrame({"pv": o["pv"], "demand": o["demand"], "unmet": o["unmet"]}).groupby(days).sum()
     f["monthly"] = daily.groupby(daily.index.month).mean()
+    cut_h = (o["unmet"] > 0.01 * o["demand"]).groupby(days).sum()
+    f["n_days"] = len(cut_h)
+    f["ok_days"] = 100 * (cut_h == 0).mean()                         # % de dias sem nenhuma hora sem luz
+    f["cut_days"] = (cut_h > 0).sum() / yrs                            # dias por ano com algum corte
     return f
 
 
@@ -313,3 +322,24 @@ def simulate_day(res: pd.DataFrame, dem: np.ndarray, s: System, day: pd.Timestam
     m = (res.index >= a) & (res.index < day + pd.Timedelta(days=1))
     o = simulate(res[m], dem[m], s, soc0=0.6)
     return o[o.index >= day]
+
+
+# ───────────────────────────── dias seguidos ─────────────────────────────
+# Uma sequência real de Mabote que desce do sol forte à chuva forte (25 a 28 de Novembro de 2022).
+SEQUENCE = dict(start="2022-11-25", days=["sunny", "partly", "cloudy", "storm"])
+
+
+def simulate_period(res: pd.DataFrame, dem: np.ndarray, s: System, start, n_days: int = 4, warmup_days: int = 7):
+    """Simula vários dias reais seguidos, precedidos de 7 dias de aquecimento (a bateria chega como chegaria)."""
+    start = pd.Timestamp(start).normalize()
+    a = start - pd.Timedelta(days=warmup_days)
+    m = (res.index >= a) & (res.index < start + pd.Timedelta(days=n_days))
+    o = simulate(res[m], dem[m], s, soc0=0.6)
+    return o[o.index >= start]
+
+
+def eve(res: pd.DataFrame, day) -> float:
+    """Sol da véspera (kWh/m²)."""
+    day = pd.Timestamp(day).normalize()
+    m = (res.index >= day - pd.Timedelta(days=1)) & (res.index < day)
+    return res.loc[m, "ghi"].sum() / 1000

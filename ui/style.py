@@ -164,6 +164,33 @@ p, li{color:#1F2933;}
 .box .say{font-size:19px; line-height:1.5; color:#1F2933;}
 .box ul{margin:10px 0 0 0; padding-left:20px; font-size:16px; line-height:1.55; color:#374151;}
 
+/* frase de resiliência («foi resiliente em X % dos dias») */
+.resil{display:flex; gap:18px; align-items:center; background:#FFFFFF; border:2px solid #16A34A; border-radius:16px;
+  padding:14px 20px; margin:14px 0 18px 0; font-size:16.5px; line-height:1.5; color:#1F2933; animation:rise .45s ease both;}
+.resil .big-n{font-size:40px; font-weight:800; line-height:1; white-space:nowrap;}
+@media (max-width:640px){.resil{flex-direction:column; align-items:flex-start;}}
+
+/* página «metodologia» */
+.mstep{display:flex; align-items:center; gap:10px; margin:26px 0 6px 0;}
+.mstep .no{width:30px; height:30px; border-radius:50%; background:#C8102E; color:#FFFFFF; font-weight:800;
+  display:flex; align-items:center; justify-content:center; font-size:15px;}
+.mstep .t{font-size:21px; font-weight:800; color:#1F2933;}
+.mtext{font-size:16px; line-height:1.6; color:#374151; max-width:980px; margin-bottom:6px;}
+
+/* diapositivo «metodologia»: 5 passos */
+.method{display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-top:12px;}
+@media (max-width:1100px){.method{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:640px){.method{grid-template-columns:1fr;}}
+.method .m{background:#FFFFFF; border:1px solid #E6E8EC; border-radius:16px; padding:14px 14px 12px 14px;
+  border-top:5px solid #C8102E; display:flex; flex-direction:column; animation:rise .45s ease both;}
+.method .m .top{display:flex; align-items:center; justify-content:space-between;}
+.method .m .no{width:28px; height:28px; border-radius:50%; background:#C8102E; color:#FFFFFF; font-weight:800;
+  display:flex; align-items:center; justify-content:center; font-size:14px;}
+.method .m .h{font-size:17px; font-weight:800; color:#1F2933; margin:10px 0 4px 0; line-height:1.2;}
+.method .m .x{font-size:14.2px; color:#4B5563; line-height:1.45; flex:1;}
+.method .m .f{font-size:12.5px; color:#8E0B21; background:#FDECEF; border-radius:8px; padding:6px 8px; margin-top:10px;
+  font-weight:600; line-height:1.35;}
+
 /* tabela desafio → ferramenta */
 .map{width:100%; border-collapse:separate; border-spacing:0; margin-top:14px; font-size:16.5px;}
 .map th{text-align:left; font-size:12.5px; letter-spacing:.1em; text-transform:uppercase; color:#6B7280; padding:8px 14px;

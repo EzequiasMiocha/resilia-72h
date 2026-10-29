@@ -62,6 +62,12 @@ def render(ctx):
         card(T("Investimento", "Investment"), f"{num(r['cost'] / 1000)} {T('mil USD', 'k USD')}",
              T(f"+{num(100 * (r['cost'] / e['cost'] - 1))} % face ao «só eficiência»",
                f"+{num(100 * (r['cost'] / e['cost'] - 1))} % vs “efficiency only”"), C["red"])
+    st.markdown(f'<div class="resil"><div class="big-n" style="color:#16A34A">{num(r["ok_days"], 1)} %</div><div>' + T(
+        f"<b>O sistema recomendado foi resiliente em {num(r['ok_days'], 1)} % dos dias reais</b>: a aldeia teve luz o dia "
+        f"inteiro, sem nenhum corte. O sistema «só eficiência» conseguiu-o em {num(e['ok_days'], 1)} % dos dias.",
+        f"<b>The recommended system was resilient on {num(r['ok_days'], 1)} % of the real days</b>: the village had power all "
+        f"day, with no cuts. The efficiency-only system managed it on {num(e['ok_days'], 1)} % of days.") + "</div></div>",
+                unsafe_allow_html=True)
     st.button(T("Usar este sistema no simulador", "Use this system in the simulator"), type="primary",
               icon=":material/check_circle:", on_click=_use, args=(r,))
     if st.session_state.pop("sz_msg", False):
@@ -71,6 +77,8 @@ def render(ctx):
     rows = [
         (T("Painéis / baterias", "Panels / batteries"), lambda x: f"{num(x['pv'])} kWp · {num(x['bat'])} kWh"),
         (T("Investimento estimado", "Estimated investment"), lambda x: f"{num(x['cost'])} USD"),
+        (T("Dias com luz o dia inteiro (resiliente)", "Days with power all day (resilient)"), lambda x: f"{num(x['ok_days'], 1)} %"),
+        (T("Dias por ano com algum corte", "Days per year with any cut"), lambda x: num(x["cut_days"])),
         (T("Energia em falta (média)", "Energy missing (average)"), lambda x: f"{num(x['risk'], 2)} %"),
         (T("Dias maus por ano (> 10 % em falta)", "Bad days per year (> 10 % missing)"), lambda x: num(x["bad_days"], 1)),
         (T("Horas com interrupção por ano", "Hours with interruption per year"), lambda x: f"{num(x['hours'])} h"),
