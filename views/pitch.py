@@ -37,8 +37,8 @@ SLIDES = [
      "Mudem o tipo de dia. À esquerda o sistema só eficiente, à direita o resiliente. Mostrem a parte preta (energia em falta).",
      "Change the type of day. Left: efficiency-only system; right: resilient. Point to the black part (energy missing)."),
     ("resiliente", "Resiliente e eficiente", "Resilient and efficient", 80,
-     "Os números de 11 anos: dias maus por ano e horas sem energia. Depois o teste nos 5 tipos de dia.",
-     "The 11-year numbers: bad days per year and hours without power. Then the test on the 5 day types."),
+     "Os números por ano: dias maus e horas sem energia. Depois o teste nos 5 tipos de dia.",
+     "The yearly numbers: bad days and hours without power. Then the test on the 5 day types."),
     ("conclusao", "Conclusão", "Conclusion", 40,
      "O que entregamos, o resultado, como se mantém e se replica, e o próximo passo. Frase final.",
      "What we deliver, the result, how it is sustained and replicated, and the next step. Closing line."),
@@ -139,15 +139,15 @@ def s_contexto(d):
 <div class="big">
   <div class="k"><div class="n red">{num(d['weak_per_year'])}</div><div class="u">{T("dias por ano com menos de metade do sol normal",
    "days per year with less than half the normal sunshine")}</div></div>
-  <div class="k"><div class="n">{num(d['weak_run'])} {T("dias", "days")}</div><div class="u">{T("a maior sequência de dias fracos seguidos (11 anos)",
-   "longest run of weak days in a row (11 years)")}</div></div>
+  <div class="k"><div class="n">{num(d['weak_run'])} {T("dias", "days")}</div><div class="u">{T("seguidos com pouco sol: a bateria tem de aguentar isto",
+   "in a row with little sun: the battery must withstand this")}</div></div>
   <div class="k"><div class="n">{num(d['sun_min'], 1)}–{num(d['sun_max'], 1)}</div><div class="u">{T("kWh/m² de sol por dia: do dia mais fraco ao mais forte",
    "kWh/m² of sun per day: from weakest to strongest day")}</div></div>
   <div class="k"><div class="n">{num(d['dem_min'])}–{num(d['dem_max'])}</div><div class="u">{T("kWh/dia: a procura de 200 famílias também varia",
    "kWh/day: demand from 200 households varies too")}</div></div>
 </div>
-<div class="lead" style="font-size:15px;margin-top:6px">{T("Fonte: dados horários reais de Mabote, 2015–2025 (ERA5, Copernicus).",
- "Source: real hourly Mabote data, 2015–2025 (ERA5, Copernicus).")}</div>""")
+<div class="lead" style="font-size:15px;margin-top:6px">{T("Fonte: dados horários reais de Mabote (ERA5, Copernicus).",
+ "Source: real hourly Mabote data (ERA5, Copernicus).")}</div>""")
 
 
 def s_objectivo(d):
@@ -173,8 +173,8 @@ def s_objectivo(d):
    "Size the <b>solar + battery</b> mini-grid of a Mabote village so that it <b>does not go dark on bad days</b>, "
    "spending only what is needed.")}</div>
   <ul>
-   <li>{T("Dados reais de Mabote, hora a hora, durante 11 anos (2015–2025).",
-          "Real Mabote data, hour by hour, over 11 years (2015–2025).")}</li>
+   <li>{T("Dados reais de Mabote, hora a hora: dias de sol, nuvens, chuva e calor.",
+          "Real Mabote data, hour by hour: sunny, cloudy, rainy and hot days.")}</li>
    <li>{T("Procura calculada a partir do <b>número de famílias</b> e dos serviços.",
           "Demand calculated from the <b>number of households</b> and services.")}</li>
    <li>{T("<b>Resiliência obrigatória</b>; entre os sistemas resilientes, escolhe-se o mais barato (eficiência).",
@@ -198,8 +198,8 @@ def s_como(d):
          T("Energia em falta (%), horas sem energia e carga da bateria ao longo do dia.",
            "Energy missing (%), hours without power and battery charge through the day.")),
         (T("Resiliência, não só eficiência", "Resilience, not just efficiency"), T("diferencial", "twist"),
-         T(f"<b>Dimensionamento:</b> {M.N_SYSTEMS} sistemas testados em 11 anos; o mais barato que aguenta os dias maus.",
-           f"<b>Sizing:</b> {M.N_SYSTEMS} systems tested over 11 years; the cheapest that withstands bad days.")),
+         T(f"<b>Dimensionamento:</b> {M.N_SYSTEMS} sistemas testados em milhares de dias reais; o mais barato que aguenta os dias maus.",
+           f"<b>Sizing:</b> {M.N_SYSTEMS} systems tested on thousands of real days; the cheapest that withstands bad days.")),
         (T("Modelo em folha de cálculo", "Spreadsheet model"), T("ferramenta simples", "simple tool"),
          T("A tabela hora a hora exporta para Excel.", "The hourly table exports to Excel.")),
     ]
@@ -217,8 +217,8 @@ def s_balanco(d):
     D = get_demand(VILLAGE)["total"].values
     _slide(f"4 · {_title(3)}", f'<h2>{T("O mesmo dia, dois sistemas: 24 horas de oferta e procura", "The same day, two systems: 24 hours of supply and demand")}</h2>',
            cls="slide compact")
-    st.session_state.setdefault("p_day", "cloudy")
-    k = st.segmented_control(T("Tipo de dia", "Type of day"), M.DAY_TYPES, key="p_day", format_func=day_label) or "cloudy"
+    st.session_state.setdefault("p_day", "storm")
+    k = st.segmented_control(T("Tipo de dia", "Type of day"), M.DAY_TYPES, key="p_day", format_func=day_label) or "storm"
     cols = st.columns(2)
     outs = []
     for (name, row), col in zip(((T("Só eficiência", "Efficiency only"), d["e"]), (T("Resiliente", "Resilient"), d["r"])), cols):
@@ -233,8 +233,16 @@ def s_balanco(d):
                         f"<div style='font-size:22px;font-weight:800;color:{VCOL[v]}'>{num(m['risk'], 1)} % "
                         f"{T('em falta', 'missing')} · {m['hours']} h · {verdict_txt(v)}</div>", unsafe_allow_html=True)
             st.plotly_chart(charts.balance24(o, None, ymax=peak, height=340, legend=False), width="stretch")
-    st.markdown(f'<div class="lead" style="font-size:15px">{T("Amarelo = sol · azul = bateria · <b>preto = energia em falta</b> · linha escura = procura · linha vermelha = bateria (%).", "Yellow = solar · blue = battery · <b>black = energy missing</b> · dark line = demand · red line = battery (%).")}</div>',
+    st.markdown(f'<div class="lead" style="font-size:15px">{T("Amarelo = sol · azul = bateria · <b>preto = sem energia</b> · linha escura = procura · linha vermelha pontilhada = carga da bateria (escala da direita).", "Yellow = solar · blue = battery · <b>black = no power</b> · dark line = demand · dotted red line = battery charge (right scale).")}</div>',
                 unsafe_allow_html=True)
+    st.markdown(f'<div class="plain" style="font-size:15.5px;margin-top:8px"><div class="h">{T("Como ler, em 3 momentos", "How to read it, in 3 moments")}</div>' + T(
+        "<b>1 · Noite:</b> só a bateria dá energia. Se começou o dia vazia, a aldeia fica às escuras (preto). "
+        "<b>2 · Meio-dia:</b> o sol serve a aldeia e o que sobra enche a bateria (barras claras abaixo do zero). Mais painéis = bateria mais cheia. "
+        "<b>3 · Fim da tarde e noite:</b> a bateria tem de aguentar até de manhã. Nos dias maus, o sistema resiliente consegue; o «só eficiência» esvazia e corta.",
+        "<b>1 · Night:</b> only the battery supplies power. If it started the day empty, the village goes dark (black). "
+        "<b>2 · Midday:</b> the sun serves the village and the rest fills the battery (light bars below zero). More panels = fuller battery. "
+        "<b>3 · Evening and night:</b> the battery must last until morning. On bad days, the resilient system does; the efficiency-only one runs out and cuts.")
+        + "</div>", unsafe_allow_html=True)
 
 
 def s_resiliente(d):
@@ -247,7 +255,7 @@ def s_resiliente(d):
                   f'<div class="u" style="color:{VCOL[va]};font-weight:700">{T("Só eficiência", "Efficiency")}: {num(a["risk"], 1)} %</div>'
                   f'<div class="u" style="color:{VCOL[vb]};font-weight:800">{T("Resiliente", "Resilient")}: {num(b["risk"], 1)} %</div></div>')
     _slide(f"5 · {_title(4)}", f"""
-<h2>{T("Testado em 11 anos de dias reais: resiliente e eficiente.", "Tested on 11 years of real days: resilient and efficient.")}</h2>
+<h2>{T("Testado em dias reais: resiliente e eficiente.", "Tested on real days: resilient and efficient.")}</h2>
 <div class="big">
   <div class="k"><div class="n red">{num(e['bad_days'])} → {num(r['bad_days'], 1)}</div><div class="u">{T("dias maus por ano (mais de 10 % de energia em falta)",
    "bad days per year (more than 10 % energy missing)")}</div></div>
@@ -272,8 +280,8 @@ def s_conclusao(d):
        "A simple tool that tells you which system to install so the village does not go dark.")}</h2>
 <div class="ideas" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
  {_idea("check", T("O que entregamos", "What we deliver"), T(
-   "Simulador de 24 h com dados reais, risco de interrupção, e dimensionamento testado em 11 anos.",
-   "24-hour simulator with real data, interruption risk, and sizing tested over 11 years."))}
+   "Simulador de 24 h com dados reais, risco de interrupção, e dimensionamento testado em dias reais.",
+   "24-hour simulator with real data, interruption risk, and sizing tested on real days."))}
  {_idea("shield", T("Resultado", "Result"), T(
    f"Com +{num(100 * (d['r']['cost'] / d['e']['cost'] - 1))} % de investimento, os dias maus passam de {num(d['e']['bad_days'])} para {num(d['r']['bad_days'], 1)} por ano.",
    f"With +{num(100 * (d['r']['cost'] / d['e']['cost'] - 1))} % investment, bad days fall from {num(d['e']['bad_days'])} to {num(d['r']['bad_days'], 1)} a year."))}

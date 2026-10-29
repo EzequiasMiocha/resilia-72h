@@ -7,7 +7,7 @@ from resilia import model as M
 from ui.i18n import T, num
 
 
-@st.cache_data(show_spinner="A carregar 11 anos de dados reais de Mabote… / Loading 11 years of real Mabote data…")
+@st.cache_data(show_spinner="A carregar os dados reais de Mabote… / Loading real Mabote data…")
 def get_resource():
     df = M.load_weather()
     return M.resource(df), M.representative_days(df)
@@ -19,8 +19,8 @@ def get_demand(village: tuple):
     return M.demand(res.index, res["t"].values, M.Village(*village))
 
 
-@st.cache_data(show_spinner=f"A testar {M.N_SYSTEMS} sistemas contra 11 anos de dias reais… / "
-                            f"Testing {M.N_SYSTEMS} systems against 11 years of real days…",
+@st.cache_data(show_spinner=f"A testar {M.N_SYSTEMS} sistemas em dias reais de Mabote… / "
+                            f"Testing {M.N_SYSTEMS} systems on real Mabote days…",
                persist="disk")
 def get_long_term(village: tuple, version: int = 3):
     res, _ = get_resource()
@@ -29,7 +29,7 @@ def get_long_term(village: tuple, version: int = 3):
 
 @st.cache_data(show_spinner=False)
 def get_year(village: tuple, pv: float, bat: float):
-    """Energia de um sistema ao longo de 11 anos (média por ano) e indicadores de energia limpa."""
+    """Energia de um sistema em todos os dias reais (média por ano) e indicadores de energia limpa."""
     res, _ = get_resource()
     s = M.System(pv=pv, bat=bat)
     f = M.year_flows(res, get_demand(village)["total"].values, s)

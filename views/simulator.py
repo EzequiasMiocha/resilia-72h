@@ -6,7 +6,7 @@ import streamlit as st
 
 from resilia import model as M
 from ui import charts
-from ui.i18n import T, date_txt, day_label, num, verdict_txt
+from ui.i18n import T, day_label, num, verdict_txt
 from ui.style import C, card, explain, page_header
 
 VCOL = {"ok": "#16A34A", "partial": "#B45309", "fragile": C["red"]}
@@ -53,9 +53,9 @@ def render(ctx):
     page_header(T("Simulador 24 h", "24-hour simulator"),
                 T("Como o sistema equilibra a oferta e a procura num dia", "How the system balances supply and demand in a day"),
                 T("Escolha o tipo de dia. O sistema solar (painel à esquerda) é testado hora a hora com o sol e o consumo "
-                  "reais de Mabote. A bateria começa o dia no estado em que estaria depois dos 7 dias reais anteriores.",
+                  "reais de Mabote. A bateria começa o dia com a carga que ficou dos dias anteriores.",
                   "Choose the type of day. The solar system (left panel) is tested hour by hour with Mabote's real sun and "
-                  "demand. The battery starts the day where it would be after the 7 real days before."))
+                  "demand. The battery starts the day with the charge left from the previous days."))
 
     steps = [T("Escolha a aldeia e o sistema no painel à esquerda.", "Choose the village and the system in the left panel."),
              T("Escolha um tipo de dia (sol, nuvens, chuva, calor).", "Choose a type of day (sun, clouds, rain, heat)."),
@@ -69,19 +69,13 @@ def render(ctx):
     k = st.segmented_control(T("Tipo de dia", "Type of day"), keys, key="day_type", format_func=day_label)
     k = k or "cloudy"
     day = ctx.days[k]
-    with st.expander(T("Ou escolha outra data real (2016–2025)", "Or choose another real date (2016–2025)"),
-                     icon=":material/calendar_month:"):
-        pick = st.date_input(T("Data", "Date"), value=None, min_value=pd.Timestamp("2016-01-08").date(),
-                             max_value=pd.Timestamp("2025-12-31").date(), key="day_pick")
-        if pick:
-            day = pd.Timestamp(pick)
     o = M.simulate_day(res, D, s, day)
     m = M.day_metrics(o, s)
     v = M.verdict(m["risk"])
     m_ghi = res.loc[o.index, "ghi"].sum() / 1000
-    st.caption(T(f"Dia real: **{date_txt(day)}** · sol: {num(m_ghi, 1)} kWh/m² · produção solar: {num(m['pv'])} kWh · "
+    st.caption(T(f"Um dia real de Mabote · sol: {num(m_ghi, 1)} kWh/m² · produção solar: {num(m['pv'])} kWh · "
                  f"procura: {num(m['demand'])} kWh",
-                 f"Real day: **{date_txt(day)}** · sun: {num(m_ghi, 1)} kWh/m² · solar output: {num(m['pv'])} kWh · "
+                 f"A real Mabote day · sun: {num(m_ghi, 1)} kWh/m² · solar output: {num(m['pv'])} kWh · "
                  f"demand: {num(m['demand'])} kWh"))
 
     c = st.columns(4)
@@ -142,7 +136,7 @@ def render(ctx):
         buf = io.BytesIO()
         with pd.ExcelWriter(buf, engine="openpyxl") as xw:
             tab.to_excel(xw, sheet_name=T("Balanco_24h", "Balance_24h"), index=False)
-        st.download_button(T("Descarregar em Excel", "Download as Excel"), buf.getvalue(), f"resilia_24h_{day:%Y%m%d}.xlsx",
+        st.download_button(T("Descarregar em Excel", "Download as Excel"), buf.getvalue(), f"resilia_24h_{k}.xlsx",
                            icon=":material/download:",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
@@ -153,12 +147,12 @@ def render(ctx):
 3. **Balanço de cada hora:** o sol serve a procura; o excedente carrega a bateria; o que falta sai da bateria (até 20 % de carga mínima); o resto é **energia em falta**.
 4. **Risco de interrupção** = energia em falta ÷ procura total do dia.
 
-Dados: reanálise ERA5 (Copernicus/ECMWF), Mabote, 2015–2025, hora a hora.
+Dados: reanálise ERA5 (Copernicus/ECMWF), Mabote, hora a hora.
 """, """
 1. **Solar:** output = panel power × sun on the panel ÷ 1000 × losses (0.88) × temperature effect (−0.35 % per °C above 25 °C).
 2. **Demand:** number of households × typical hourly use + health centre, school, water pump, grain mill and street lighting. Varies with the hour, the weekday, heat and from day to day.
 3. **Hourly balance:** the sun serves demand; surplus charges the battery; shortfalls are drawn from the battery (down to a 20 % minimum); the rest is **energy missing**.
 4. **Interruption risk** = energy missing ÷ total demand of the day.
 
-Data: ERA5 reanalysis (Copernicus/ECMWF), Mabote, 2015–2025, hourly.
+Data: ERA5 reanalysis (Copernicus/ECMWF), Mabote, hourly.
 """))

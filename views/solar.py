@@ -151,11 +151,11 @@ def render(ctx):
         "panels, which helps them produce a little more.") + "</div>", unsafe_allow_html=True)
     with st.expander(T("Pressupostos destes números", "Assumptions behind these numbers"), icon=":material/info:"):
         st.markdown(T(
-            f"- Médias de 11 anos reais (2015–2025), hora a hora.\n"
+            f"- Médias por ano, calculadas hora a hora com dados reais de Mabote.\n"
             f"- Gerador a gasóleo: {num(M.DIESEL_L_KWH, 2)} l/kWh, {num(M.CO2_KG_L, 2)} kg de CO₂ por litro, gasóleo a {num(M.DIESEL_USD_L, 2)} USD/l.\n"
             f"- Custo da energia: investimento + uma troca de baterias + manutenção de {num(100 * M.OM, 1)} % por ano, a dividir pela energia entregue em {M.LIFE} anos (sem juros).\n"
             f"- Painel de {M.PANEL_W} W com cerca de {num(M.PANEL_M2, 1)} m².",
-            f"- Averages over 11 real years (2015–2025), hour by hour.\n"
+            f"- Yearly averages, calculated hour by hour with real Mabote data.\n"
             f"- Diesel generator: {num(M.DIESEL_L_KWH, 2)} l/kWh, {num(M.CO2_KG_L, 2)} kg CO₂ per litre, diesel at {num(M.DIESEL_USD_L, 2)} USD/l.\n"
             f"- Energy cost: investment + one battery replacement + {num(100 * M.OM, 1)} % maintenance per year, divided by energy delivered over {M.LIFE} years (no interest).\n"
             f"- {M.PANEL_W} W panel of about {num(M.PANEL_M2, 1)} m²."))

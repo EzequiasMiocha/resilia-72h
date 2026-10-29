@@ -313,7 +313,7 @@ def brand():
   · Mabote, Inhambane</div></div>
   <div class="right"><span class="pill red">EMERGE Final Hackathon · Maputo</span>
   <span class="pill" style="background:#ECFDF3;border-color:#BBF7D0;color:#15803D">{T("100 % renovável", "100 % renewable")}</span>
-  <span class="pill">{T("Dados reais 2015–2025", "Real data 2015–2025")}</span>
+  <span class="pill">{T("Dados reais de Mabote", "Real Mabote data")}</span>
   <span class="pill">{T("Grupo 36 · UEM", "Team 36 · UEM")}</span>{eh}</div>
 </div>""", unsafe_allow_html=True)
 
@@ -386,6 +386,6 @@ def legend(items):
 def footer():
     st.markdown(f'<div class="foot">RESILIA MZ · {T("Grupo 36", "Team 36")} — Ezequias Miocha, Laura Hele, '
                 f'Suely Muando · Universidade Eduardo Mondlane · {T("Projecto", "Project")} EMERGE (Horizon Europe, '
-                f'GA 101118278) · {T("Dados", "Data")}: ERA5 (ECMWF/Copernicus), Mabote 2015–2025</div>',
+                f'GA 101118278) · {T("Dados", "Data")}: ERA5 (ECMWF/Copernicus), Mabote</div>',
                 unsafe_allow_html=True)
     to_top()

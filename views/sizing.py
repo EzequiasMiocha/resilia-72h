@@ -22,11 +22,11 @@ def _use(r):
 def render(ctx):
     page_header(T("Dimensionamento", "System sizing"),
                 T("Que sistema instalar para os próximos anos?", "Which system to install for the years ahead?"),
-                T(f"Testamos {M.N_SYSTEMS} combinações de painéis solares e baterias contra 11 anos de dias reais de Mabote "
-                  "(2015–2025). «Só eficiência» é o mais barato para o dia médio. «Resiliente» é o mais barato que também "
+                T(f"Testamos {M.N_SYSTEMS} combinações de painéis solares e baterias em milhares de dias reais de Mabote, "
+                  "com sol, nuvens, chuva e calor. «Só eficiência» é o mais barato para o dia médio. «Resiliente» é o mais barato que também "
                   "aguenta os dias maus.",
-                  f"We test {M.N_SYSTEMS} combinations of solar panels and batteries against 11 years of real Mabote days "
-                  "(2015–2025). “Efficiency only” is the cheapest for the average day. “Resilient” is the cheapest that also "
+                  f"We test {M.N_SYSTEMS} combinations of solar panels and batteries on thousands of real Mabote days, "
+                  "with sun, clouds, rain and heat. “Efficiency only” is the cheapest for the average day. “Resilient” is the cheapest that also "
                   "withstands the bad days."))
 
     st.session_state.setdefault("sz_level", "recommended")
@@ -67,7 +67,7 @@ def render(ctx):
     if st.session_state.pop("sz_msg", False):
         st.success(T("Sistema aplicado. Abra o «Simulador 24 h» no menu do topo.", "System applied. Open the “24-hour simulator” in the top menu."))
 
-    st.markdown(f"#### {T('Só eficiência vs resiliente, em 11 anos reais', 'Efficiency only vs resilient, over 11 real years')}")
+    st.markdown(f"#### {T('Só eficiência vs resiliente (média por ano)', 'Efficiency only vs resilient (yearly average)')}")
     rows = [
         (T("Painéis / baterias", "Panels / batteries"), lambda x: f"{num(x['pv'])} kWp · {num(x['bat'])} kWh"),
         (T("Investimento estimado", "Estimated investment"), lambda x: f"{num(x['cost'])} USD"),
@@ -114,15 +114,15 @@ def render(ctx):
 
     with st.expander(T("Pressupostos e dados", "Assumptions and data"), icon=":material/info:"):
         st.markdown(T(f"""
-- **Dados:** sol e temperatura reais de Mabote, hora a hora, 2015–2025 (reanálise ERA5, Copernicus/ECMWF): 96 432 horas.
+- **Dados:** sol e temperatura reais de Mabote, hora a hora (reanálise ERA5, Copernicus/ECMWF).
 - **Procura:** calculada a partir do número de famílias e dos serviços (painel à esquerda), com variação diária.
 - **Bateria:** lítio (LFP), eficiência 95 %, nunca abaixo de 20 % de carga.
-- **Custos indicativos:** solar {num(M.COST['pv'])} USD/kWp, baterias {num(M.COST['bat'])} USD/kWh (mini-redes em África, 2024–2025).
+- **Custos indicativos:** solar {num(M.COST['pv'])} USD/kWp, baterias {num(M.COST['bat'])} USD/kWh (valores típicos de mini-redes em África).
 - **Dia mau:** um dia em que falta mais de 10 % da energia pedida.
 """, f"""
-- **Data:** real Mabote sun and temperature, hourly, 2015–2025 (ERA5 reanalysis, Copernicus/ECMWF): 96,432 hours.
+- **Data:** real Mabote sun and temperature, hourly (ERA5 reanalysis, Copernicus/ECMWF).
 - **Demand:** calculated from the number of households and services (left panel), with daily variation.
 - **Battery:** lithium (LFP), 95 % efficiency, never below 20 % charge.
-- **Indicative costs:** solar {num(M.COST['pv'])} USD/kWp, batteries {num(M.COST['bat'])} USD/kWh (African mini-grids, 2024–2025).
+- **Indicative costs:** solar {num(M.COST['pv'])} USD/kWp, batteries {num(M.COST['bat'])} USD/kWh (typical African mini-grid values).
 - **Bad day:** a day on which more than 10 % of the requested energy is missing.
 """))
