@@ -177,33 +177,16 @@ def verdict(risk: float, hours: int = 0):
 
 
 # ───────────────────────────── tipos de dia (dados reais) ─────────────────────────────
-DAY_TYPES = ["sunny", "partly", "cloudy", "storm", "hot"]
+DAY_TYPES = ["sunny", "partly", "cloudy", "storm"]
 
 
-def representative_days(df: pd.DataFrame) -> dict:
-    """Escolhe dias reais típicos de cada condição.
+def representative_days(df: pd.DataFrame = None) -> dict:
+    """Os dias de exemplo são os 4 dias reais seguidos de SEQUENCE (do sol forte à chuva forte).
 
-    Cada dia escolhido tem uma véspera normal (os dois dias anteriores com sol perto do habitual), para que o
-    resultado mostre o efeito desse dia e não o de dias maus anteriores."""
-    d = df.resample("D").agg({"shortwave_radiation": "sum", "precipitation": "sum", "temperature_2m": "max"})
-    sol = d["shortwave_radiation"]
-    normal_eve = (sol.shift(1) >= 0.8 * sol.mean()) & (sol.shift(2) >= 0.8 * sol.mean())
-    ok = (d.index.year >= 2016) & normal_eve
-
-    def closest(series, q, pool):
-        target = series[pool].quantile(q) if pool is not None else series.quantile(q)
-        cand = series[ok & (pool if pool is not None else True)]
-        return (cand - target).abs().idxmin()
-
-    rain_pool = d["precipitation"] >= 30          # dia típico de chuva forte (não o pior caso)
-    return {
-        "sunny": closest(sol, 0.90, None),
-        "partly": closest(sol, 0.50, None),
-        "cloudy": closest(sol, 0.08, None),
-        "storm": closest(sol, 0.50, rain_pool) if (rain_pool & ok).any() else closest(sol, 0.05, None),
-        "hot": d["temperature_2m"][ok].idxmax(),
-    }
-
+    Usar sempre a mesma sequência garante que o teste de 24 horas e o gráfico de dias seguidos mostram os mesmos
+    números: o dia 3 começa com a bateria que o dia 2 deixou, e assim por diante."""
+    start = pd.Timestamp(SEQUENCE["start"])
+    return {k: start + pd.Timedelta(days=i) for i, k in enumerate(SEQUENCE["days"])}
 
 # ───────────────────────────── dimensionamento a longo prazo ─────────────────────────────
 GRID = dict(pv=list(range(30, 95, 5)), bat=[80, 100, 120, 140, 160, 180, 200, 240, 280, 320, 400, 500])
@@ -319,6 +302,9 @@ def simulate_day(res: pd.DataFrame, dem: np.ndarray, s: System, day: pd.Timestam
     no estado em que realmente estaria (e não num valor inventado)."""
     day = pd.Timestamp(day).normalize()
     a = day - pd.Timedelta(days=warmup_days)
+    seq0 = pd.Timestamp(SEQUENCE["start"])
+    if seq0 <= day < seq0 + pd.Timedelta(days=len(SEQUENCE["days"])):
+        a = seq0 - pd.Timedelta(days=warmup_days)      # mesmo arranque que a sequência: números iguais nos dois gráficos
     m = (res.index >= a) & (res.index < day + pd.Timedelta(days=1))
     o = simulate(res[m], dem[m], s, soc0=0.6)
     return o[o.index >= day]

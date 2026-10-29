@@ -41,8 +41,8 @@ SLIDES = [
      "Four real days in a row. Follow the battery line: days 1 and 2 fill it; on day 3 the small system no longer fills "
      "it; on day 4 it goes dark while the resilient one holds on with its reserve."),
     ("resiliente", "Resiliente e eficiente", "Resilient and efficient", 75,
-     "Digam a frase do título: resiliente em 98,6 % dos dias. Depois os números por ano e o teste nos 5 tipos de dia.",
-     "Say the title sentence: resilient on 98.6 % of days. Then the yearly numbers and the 5 day-type test."),    ("conclusao", "Conclusão", "Conclusion", 40,
+     "Digam a frase do título: resiliente em 98,6 % dos dias. Depois os números por ano e, em baixo, os mesmos 4 dias do diapositivo anterior.",
+     "Say the title sentence: resilient on 98.6 % of days. Then the yearly numbers and, below, the same 4 days as the previous slide."),    ("conclusao", "Conclusão", "Conclusion", 40,
      "O que entregamos, o resultado, como se mantém e se replica, e o próximo passo. Frase final.",
      "What we deliver, the result, how it is sustained and replicated, and the next step. Closing line."),
 ]
@@ -54,7 +54,7 @@ def _title(k):
 
 
 @st.cache_data(show_spinner=False)
-def pitch_data(version=5):
+def pitch_data(version=6):
     res, days = get_resource()
     D = get_demand(VILLAGE)["total"].values
     ch = presets(VILLAGE)
@@ -298,9 +298,9 @@ def s_resiliente(d):
 </div>
 <div class="lead" style="font-size:16px"><b>{T("Só eficiência", "Efficiency only")}:</b> {_sys(e)} &nbsp;·&nbsp;
 <b class="red">{T("Resiliente", "Resilient")}:</b> {_sys(r)}</div>
-<div style="font-size:18px;font-weight:800;margin:16px 0 4px 0">{T("Teste de 24 horas: a aldeia ficou sem luz em algum momento do dia?",
- "24-hour test: did the village lose power at any point in the day?")}</div>
-<div class="big" style="grid-template-columns:repeat(5,1fr);margin-top:6px">{cells}</div>""")
+<div style="font-size:18px;font-weight:800;margin:16px 0 4px 0">{T("Os mesmos 4 dias seguidos, dia a dia: a aldeia ficou sem luz?",
+ "The same 4 days in a row, day by day: did the village lose power?")}</div>
+<div class="big" style="grid-template-columns:repeat(4,1fr);margin-top:6px">{cells}</div>""")
 
 
 def s_conclusao(d):

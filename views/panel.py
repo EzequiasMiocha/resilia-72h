@@ -8,7 +8,7 @@ from ui.i18n import T, num
 
 
 @st.cache_data(show_spinner="A carregar os dados reais de Mabote… / Loading real Mabote data…")
-def get_resource(version: int = 2):
+def get_resource(version: int = 3):
     df = M.load_weather()
     return M.resource(df), M.representative_days(df)
 

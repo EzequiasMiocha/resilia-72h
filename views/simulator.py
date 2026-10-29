@@ -54,13 +54,13 @@ def render(ctx):
     s, res, D = ctx.system, ctx.res, ctx.dem["total"].values
     page_header(T("Simulador 24 h", "24-hour simulator"),
                 T("Como o sistema equilibra a oferta e a procura num dia", "How the system balances supply and demand in a day"),
-                T("Escolha o tipo de dia. O sistema solar (painel à esquerda) é testado hora a hora com o sol e o consumo "
+                T("Escolha um dos 4 dias reais seguidos. O sistema solar (painel à esquerda) é testado hora a hora com o sol e o consumo "
                   "reais de Mabote. A bateria começa o dia com a carga que ficou dos dias anteriores.",
-                  "Choose the type of day. The solar system (left panel) is tested hour by hour with Mabote's real sun and "
+                  "Choose one of the 4 real days in a row. The solar system (left panel) is tested hour by hour with Mabote's real sun and "
                   "demand. The battery starts the day with the charge left from the previous days."))
 
     steps = [T("Escolha a aldeia e o sistema no painel à esquerda.", "Choose the village and the system in the left panel."),
-             T("Escolha um tipo de dia (sol, nuvens, chuva, calor).", "Choose a type of day (sun, clouds, rain, heat)."),
+             T("Escolha um dos 4 dias seguidos: do sol forte à chuva forte.", "Choose one of the 4 days in a row: from strong sun to heavy rain."),
              T("Leia o resumo e o gráfico: amarelo é sol, azul é bateria, preto é falta.",
                "Read the summary and the chart: yellow is sun, blue is battery, black is missing.")]
     st.markdown('<div class="steps">' + "".join(f'<div class="s"><div class="n">{i + 1}</div><div>{x}</div></div>'
@@ -68,7 +68,7 @@ def render(ctx):
 
     keys = M.DAY_TYPES
     st.session_state.setdefault("day_type", "cloudy")
-    k = st.segmented_control(T("Tipo de dia", "Type of day"), keys, key="day_type", format_func=day_label)
+    k = st.segmented_control(T("Dia (4 dias reais seguidos)", "Day (4 real days in a row)"), keys, key="day_type", format_func=day_label)
     k = k or "cloudy"
     day = ctx.days[k]
     o = M.simulate_day(res, D, s, day)
@@ -123,11 +123,11 @@ def render(ctx):
     st.plotly_chart(charts.sequence([(f"{T('Este sistema', 'This system')} · {num(s.pv)} kWp · {num(s.bat)} kWh", seq)],
                                     seq_lab, seq_sun, height=560), width="stretch")
 
-    # teste de resiliência: o mesmo sistema nos 5 tipos de dia
-    st.markdown(f"### {T('Teste de resiliência em 24 horas', '24-hour resilience test')}")
-    st.caption(T("O mesmo sistema, testado nos 5 tipos de dia reais. «Sem cortes» = a aldeia teve luz nas 24 horas. "
+    # resumo dia a dia dos mesmos 4 dias seguidos
+    st.markdown(f"### {T('Resumo dia a dia', 'Day-by-day summary')}")
+    st.caption(T("Os mesmos 4 dias seguidos, um a um. «Sem cortes» = a aldeia teve luz nas 24 horas. "
                  "Um sistema resiliente não tem cortes em nenhum.",
-                 "The same system, tested on the 5 real day types. “No cuts” = the village had power for all 24 hours. "
+                 "The same 4 days in a row, one by one. “No cuts” = the village had power for all 24 hours. "
                  "A resilient system has no cuts on any of them."))
     cells = ""
     for kk in keys:
@@ -138,7 +138,7 @@ def render(ctx):
         cells += (f'<div class="k" style="border-top:4px solid {col}"><div class="u"><b>{day_label(kk)}</b></div>'
                   f'<div class="n" style="color:{col};font-size:24px">{cut_txt(mm["hours"])}</div>'
                   f'<div class="u">{T("energia em falta", "energy missing")}: {num(mm["risk"], 1)} %</div></div>')
-    st.markdown(f'<div class="big" style="grid-template-columns:repeat(5,1fr)">{cells}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="big" style="grid-template-columns:repeat(4,1fr)">{cells}</div>', unsafe_allow_html=True)
     fy, _ = get_year(ctx.village, float(s.pv), float(s.bat))
     vy = "ok" if fy["ok_days"] >= 98 else ("partial" if fy["ok_days"] >= 90 else "fragile")
     st.markdown(f'<div class="resil" style="border-color:{VCOL[vy]}"><div class="big-n" style="color:{VCOL[vy]}">'

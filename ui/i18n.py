@@ -37,11 +37,10 @@ def date_txt(ts) -> str:
 
 
 DAY_LABELS = {
-    "sunny": ("Dia de sol", "Sunny day"),
-    "partly": ("Parcialmente nublado", "Partly cloudy"),
-    "cloudy": ("Dia nublado", "Cloudy day"),
-    "storm": ("Chuva forte", "Heavy rain"),
-    "hot": ("Dia muito quente", "Very hot day"),
+    "sunny": ("Dia 1 · Sol forte", "Day 1 · Strong sun"),
+    "partly": ("Dia 2 · Algumas nuvens", "Day 2 · Some clouds"),
+    "cloudy": ("Dia 3 · Nublado e chuva", "Day 3 · Cloudy and rain"),
+    "storm": ("Dia 4 · Chuva forte", "Day 4 · Heavy rain"),
 }
 
 

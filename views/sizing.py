@@ -107,7 +107,7 @@ def render(ctx):
     with rr:
         # teste de 24 h para os dois sistemas
         res, D = ctx.res, ctx.dem["total"].values
-        st.markdown(f"**{T('Teste de 24 horas nos 5 tipos de dia', '24-hour test on the 5 day types')}**")
+        st.markdown(f"**{T('Os mesmos 4 dias seguidos, dia a dia', 'The same 4 days in a row, day by day')}**")
         rows2 = []
         for k in M.DAY_TYPES:
             vals = []
