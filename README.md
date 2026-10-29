@@ -26,6 +26,7 @@ Grupo 36 (UEM) · EMERGE Final Hackathon.
 ## Páginas
 
 - **Apresentação** (página inicial, 6 diapositivos, cronómetro e notas do orador)
+- **Energia solar** (o caminho da energia em 4 passos, indicadores de energia limpa, fluxo anual, sol ao longo do ano, glossário)
 - **Simulador 24 h**
 - **Dimensionamento**
 
@@ -47,6 +48,7 @@ Funciona offline com `data/MZ_era5.csv.gz`. Para reconstruir os dados: `python s
 | `app.py` | Navegação |
 | `resilia/model.py` | Modelo: dados, oferta, procura, balanço horário e dimensionamento |
 | `views/pitch.py` | Apresentação |
+| `views/solar.py` | Energia solar (explicação e indicadores de energia renovável) |
 | `views/simulator.py` | Simulador 24 h |
 | `views/sizing.py` | Dimensionamento |
 | `views/panel.py` | Painel lateral (aldeia e sistema) |

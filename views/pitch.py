@@ -14,7 +14,7 @@ from ui.i18n import T, day_label, num, verdict_txt
 from ui.icons import icon
 from ui.style import C
 
-from .panel import get_demand, get_resource, presets
+from .panel import get_demand, get_resource, get_year, presets
 
 VILLAGE = (200, True, True, True, True, 0.0)       # aldeia de referência da apresentação
 VCOL = {"ok": "#16A34A", "partial": "#B45309", "fragile": C["red"]}
@@ -51,7 +51,7 @@ def _title(k):
 
 
 @st.cache_data(show_spinner=False)
-def pitch_data(version=2):
+def pitch_data(version=3):
     res, days = get_resource()
     D = get_demand(VILLAGE)["total"].values
     ch = presets(VILLAGE)
@@ -68,7 +68,8 @@ def pitch_data(version=2):
     for name, row in (("e", e), ("r", r)):
         s = M.System(pv=row["pv"], bat=row["bat"])
         test[name] = {k: M.day_metrics(M.simulate_day(res, D, s, days[k]), s) for k in M.DAY_TYPES}
-    return dict(e=e, r=r, weak_per_year=weak.sum() / (len(daily) / 365.25), weak_run=best,
+    imp = get_year(VILLAGE, float(r["pv"]), float(r["bat"]))[1]
+    return dict(e=e, r=r, imp=imp, weak_per_year=weak.sum() / (len(daily) / 365.25), weak_run=best,
                 dem_mean=dd.mean(), dem_min=dd.quantile(0.02), dem_max=dd.quantile(0.98), test=test,
                 sun_min=daily.quantile(0.02) / 1000, sun_max=daily.quantile(0.98) / 1000, wind_mean=res["v"].mean())
 
@@ -269,16 +270,19 @@ def s_conclusao(d):
     _slide(f"6 · {_title(5)}", f"""
 <h2>{T("Uma ferramenta simples que diz que sistema instalar para a aldeia não ficar às escuras.",
        "A simple tool that tells you which system to install so the village does not go dark.")}</h2>
-<div class="ideas" style="grid-template-columns:repeat(auto-fit,minmax(215px,1fr))">
+<div class="ideas" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
  {_idea("check", T("O que entregamos", "What we deliver"), T(
    "Simulador de 24 h com dados reais, risco de interrupção, e dimensionamento testado em 11 anos.",
    "24-hour simulator with real data, interruption risk, and sizing tested over 11 years."))}
  {_idea("shield", T("Resultado", "Result"), T(
    f"Com +{num(100 * (d['r']['cost'] / d['e']['cost'] - 1))} % de investimento, os dias maus passam de {num(d['e']['bad_days'])} para {num(d['r']['bad_days'], 1)} por ano.",
    f"With +{num(100 * (d['r']['cost'] / d['e']['cost'] - 1))} % investment, bad days fall from {num(d['e']['bad_days'])} to {num(d['r']['bad_days'], 1)} a year."))}
+ {_idea("leaf", T("100 % renovável", "100 % renewable"), T(
+   f"Evita {num(d['imp']['diesel_l'] / 1000, 1)} mil litros de gasóleo e {num(d['imp']['co2_t'])} t de CO₂ por ano. Energia a {num(d['imp']['lcoe'], 2)} USD/kWh.",
+   f"Avoids {num(d['imp']['diesel_l'] / 1000, 1)}k litres of diesel and {num(d['imp']['co2_t'])} t of CO₂ a year. Energy at {num(d['imp']['lcoe'], 2)} USD/kWh."))}
  {_idea("users", T("Sustentabilidade e replicação", "Sustainability and replication"), T(
-   "Gratuita e de código aberto, para comunidades, ONGs e o FUNAE. Para outra aldeia basta o sol e a temperatura hora a hora e o número de famílias.",
-   "Free and open source, for communities, NGOs and FUNAE. For another village it only needs hourly sun and temperature and the number of households."))}
+   "Gratuita e de código aberto. Serve qualquer aldeia: basta o sol hora a hora e o número de famílias.",
+   "Free and open source. Works for any village: it only needs hourly sun and the number of households."))}
  {_idea("signal", T("Próximo passo", "Next step"), T(
    "Piloto numa aldeia de Mabote: medir a procura real e confirmar o dimensionamento no terreno.",
    "Pilot in a Mabote village: measure real demand and confirm the sizing in the field."))}

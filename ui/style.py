@@ -230,6 +230,40 @@ p, li{color:#1F2933;}
 .totop:hover{transform:translateY(-3px); background:#A50D26;}
 .totop svg{stroke:#FFFFFF;}
 
+/* ════════════ ENERGIA SOLAR (página explicativa) ════════════ */
+.flow{display:grid; grid-template-columns:1fr auto 1fr auto 1fr auto 1fr; gap:10px; align-items:stretch; margin:10px 0 8px 0;}
+@media (max-width:1000px){.flow{grid-template-columns:1fr;} .flow .ar{transform:rotate(90deg); justify-self:center;}}
+.flow .st{background:#FFFFFF; border:1px solid #E6E8EC; border-radius:18px; padding:18px 18px 16px 18px;
+  box-shadow:0 1px 3px rgba(17,24,39,.05); position:relative; animation:rise .45s ease both;}
+.flow .st .badge{width:52px; height:52px; border-radius:16px; display:flex; align-items:center; justify-content:center; margin-bottom:10px;}
+.flow .st .k{font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#6B7280;}
+.flow .st .v{font-size:26px; font-weight:800; color:#1F2933; margin:2px 0 4px 0; line-height:1.1;}
+.flow .st .x{font-size:14.5px; color:#4B5563; line-height:1.45;}
+.flow .ar{align-self:center; color:#C3C8D0;}
+.eco{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:12px; margin:8px 0 6px 0;}
+.eco .e{background:#FFFFFF; border:1px solid #E6E8EC; border-radius:16px; padding:16px; border-top:4px solid #16A34A;
+  animation:rise .45s ease both;}
+.eco .e .t{display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; letter-spacing:.06em;
+  text-transform:uppercase; color:#15803D;}
+.eco .e .v{font-size:28px; font-weight:800; color:#1F2933; margin-top:6px; line-height:1.1;}
+.eco .e .s{font-size:13.5px; color:#4B5563; margin-top:4px; line-height:1.4;}
+.shares{display:flex; flex-direction:column; gap:10px; margin-top:8px;}
+.shares .r{display:flex; gap:12px; align-items:flex-start; background:#FFFFFF; border:1px solid #E6E8EC; border-radius:14px; padding:12px 14px;}
+.shares .r .p{flex:0 0 66px; font-size:24px; font-weight:800; line-height:1.1;}
+.shares .r .x{font-size:14.5px; color:#374151; line-height:1.45;}
+.gloss{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-top:8px;}
+.gloss .g{background:#FFFFFF; border:1px solid #E6E8EC; border-radius:14px; padding:14px 16px;}
+.gloss .g .w{font-size:16px; font-weight:800; color:#C8102E;}
+.gloss .g .d{font-size:14px; color:#374151; margin-top:4px; line-height:1.45;}
+.steps{display:flex; gap:10px; flex-wrap:wrap; margin:0 0 14px 0;}
+.steps .s{flex:1 1 220px; display:flex; gap:10px; align-items:center; background:#FFFFFF; border:1px solid #E6E8EC;
+  border-radius:14px; padding:10px 14px; font-size:14px; color:#374151;}
+.steps .s .n{flex:0 0 28px; height:28px; border-radius:50%; background:#C8102E; color:#FFFFFF; font-weight:800;
+  display:flex; align-items:center; justify-content:center; font-size:14px;}
+.plain{background:#FFFFFF; border:1px solid #E6E8EC; border-left:6px solid #F2A900; border-radius:14px; padding:14px 18px;
+  font-size:16.5px; line-height:1.6; color:#1F2933; margin:12px 0 16px 0;}
+.plain .h{font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#8A5A00; margin-bottom:4px;}
+
 /* ════════════ MICRO-INTERACÇÕES ════════════ */
 @keyframes rise{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
 .slide, .card, .vs, .idea, .chain .n, .side, .big .k, .page-h{animation:rise .45s ease both;}
@@ -275,9 +309,10 @@ def brand():
 <div class="brand">
   {lh}
   <div><div class="name">RESILIA <span>MZ</span></div>
-  <div class="sub">{T("Mini-rede solar resiliente e eficiente", "Resilient and efficient solar mini-grid")}
+  <div class="sub">{T("Energia renovável · mini-rede solar resiliente e eficiente", "Renewable energy · resilient and efficient solar mini-grid")}
   · Mabote, Inhambane</div></div>
   <div class="right"><span class="pill red">EMERGE Final Hackathon · Maputo</span>
+  <span class="pill" style="background:#ECFDF3;border-color:#BBF7D0;color:#15803D">{T("100 % renovável", "100 % renewable")}</span>
   <span class="pill">{T("Dados reais 2015–2025", "Real data 2015–2025")}</span>
   <span class="pill">{T("Grupo 36 · UEM", "Team 36 · UEM")}</span>{eh}</div>
 </div>""", unsafe_allow_html=True)

@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .i18n import T
+from .i18n import T, num
 from .style import C
 
 FONT = dict(family="Inter, system-ui, sans-serif", color="#1F2933", size=13)
@@ -73,6 +73,47 @@ def demand_profile(parts: pd.DataFrame, title):
                      ticktext=[f"{x:02d}h" for x in range(0, 24, 2)])
     base(fig, title, height=360)
     fig.update_layout(margin=dict(t=56, b=110), legend=dict(orientation="h", y=-0.32, yanchor="top", x=0))
+    return fig
+
+
+def energy_flow(f: dict, title=None, height=380):
+    """Para onde vai a energia solar num ano (diagrama de fluxo, MWh/ano)."""
+    nodes = [T("Energia do sol", "Solar energy"), T("Bateria", "Battery"), T("Aldeia servida", "Village served"),
+             T("Excedente livre", "Free surplus"), T("Perdas da bateria", "Battery losses")]
+    ncol = [C["solar"], C["bat"], C["red"], "#F7D774", "#C3C8D0"]
+    src, dst, val, lc = [0, 0, 1, 1, 0], [2, 1, 2, 4, 3], [f["direct"], f["bat_in"], f["bat_out"], f["bat_loss"], f["curt"]], \
+        ["rgba(242,169,0,.45)", "rgba(242,169,0,.35)", "rgba(37,99,235,.40)", "rgba(156,163,175,.45)", "rgba(247,215,116,.55)"]
+    tot = [f["pv"], f["bat_in"], f["served"], f["curt"], f["bat_loss"]]
+    unit = T("MWh/ano", "MWh/yr")
+    fig = go.Figure(go.Sankey(
+        arrangement="snap", valueformat=".0f", valuesuffix=" kWh",
+        node=dict(label=nodes, customdata=[f"{num(t / 1000)} {unit}" for t in tot],
+                  hovertemplate="%{label}: %{customdata}<extra></extra>",
+                  color=ncol, pad=26, thickness=22, line=dict(color="#FFFFFF", width=2)),
+        link=dict(source=src, target=dst, value=val, color=lc,
+                  hovertemplate="%{source.label} → %{target.label}: %{value:,.0f} kWh<extra></extra>"),
+    ))
+    fig.update_layout(font=dict(family=FONT["family"], size=14, color="#1F2933"), height=height,
+                      paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=50 if title else 10, l=10, r=10, b=10),
+                      title=dict(text=title, font=dict(size=16), x=0) if title else None)
+    return fig
+
+
+def monthly(m: pd.DataFrame, title):
+    """Produção solar e procura, média por dia em cada mês (kWh/dia)."""
+    lab = [T(x, y) for x, y in zip(["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"],
+                                   ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])]
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=lab, y=m["pv"], name=T("Produção solar", "Solar output"), marker_color=C["solar"],
+                         marker_line=dict(color="#FFFFFF", width=2),
+                         hovertemplate="%{x}: %{y:.0f} kWh/" + T("dia", "day") + "<extra></extra>"))
+    fig.add_trace(go.Bar(x=lab, y=m["demand"], name=T("Procura da aldeia", "Village demand"), marker_color="#4B5563",
+                         marker_line=dict(color="#FFFFFF", width=2),
+                         hovertemplate="%{x}: %{y:.0f} kWh/" + T("dia", "day") + "<extra></extra>"))
+    fig.update_layout(barmode="group", bargap=0.25, bargroupgap=0.05, yaxis_title=T("kWh por dia", "kWh per day"),
+                      hovermode="closest")
+    base(fig, title, height=360)
+    fig.update_layout(legend=dict(orientation="h", y=1.02, yanchor="bottom", x=0), margin=dict(t=80, b=40))
     return fig
 
 

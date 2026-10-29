@@ -25,6 +25,29 @@ def _verdict_box(v, risk, hours):
                 f'{verdict_txt(v)}</b> &nbsp;{txt}</div>', unsafe_allow_html=True)
 
 
+def _plain(o, m):
+    """O dia contado em palavras simples."""
+    soc0, soc1 = 100 * o["soc"].iloc[0], m["soc_end"]
+    txt = T(f"Os painéis solares produziram <b>{num(m['pv'])} kWh</b> e a aldeia pediu <b>{num(m['demand'])} kWh</b>. "
+            f"A bateria começou o dia com {num(soc0)} % e terminou com {num(soc1)} %. ",
+            f"The solar panels produced <b>{num(m['pv'])} kWh</b> and the village asked for <b>{num(m['demand'])} kWh</b>. "
+            f"The battery started the day at {num(soc0)} % and ended at {num(soc1)} %. ")
+    cut = o.index.hour[o["unmet"] > 0.01 * o["demand"]]
+    if len(cut):
+        txt += T(f"Faltaram <b>{num(m['unmet'])} kWh</b> em {len(cut)} horas, entre as {cut.min():02d}h e as {cut.max():02d}h, "
+                 "quando a bateria chegou ao mínimo. Um sistema resiliente evita isto com mais bateria ou mais painéis.",
+                 f"<b>{num(m['unmet'])} kWh</b> were missing over {len(cut)} hours, between {cut.min():02d}h and {cut.max():02d}h, "
+                 "when the battery reached its minimum. A resilient system avoids this with more battery or more panels.")
+    else:
+        txt += T("A aldeia teve energia <b>em todas as horas</b>: de dia veio do sol, à noite veio da bateria.",
+                 "The village had power <b>every hour</b>: from the sun by day and from the battery at night.")
+    if m["waste"] > 1:
+        txt += T(f" Sobrou {num(m['waste'])} % da energia solar, que pode servir novos usos durante o dia.",
+                 f" {num(m['waste'])} % of the solar energy was left over and could serve new daytime uses.")
+    st.markdown(f'<div class="plain"><div class="h">{T("O dia em palavras simples", "The day in plain words")}</div>{txt}</div>',
+                unsafe_allow_html=True)
+
+
 def render(ctx):
     s, res, D = ctx.system, ctx.res, ctx.dem["total"].values
     page_header(T("Simulador 24 h", "24-hour simulator"),
@@ -33,6 +56,13 @@ def render(ctx):
                   "reais de Mabote. A bateria começa o dia no estado em que estaria depois dos 7 dias reais anteriores.",
                   "Choose the type of day. The solar system (left panel) is tested hour by hour with Mabote's real sun and "
                   "demand. The battery starts the day where it would be after the 7 real days before."))
+
+    steps = [T("Escolha a aldeia e o sistema no painel à esquerda.", "Choose the village and the system in the left panel."),
+             T("Escolha um tipo de dia (sol, nuvens, chuva, calor).", "Choose a type of day (sun, clouds, rain, heat)."),
+             T("Leia o resumo e o gráfico: amarelo é sol, azul é bateria, preto é falta.",
+               "Read the summary and the chart: yellow is sun, blue is battery, black is missing.")]
+    st.markdown('<div class="steps">' + "".join(f'<div class="s"><div class="n">{i + 1}</div><div>{x}</div></div>'
+                                                for i, x in enumerate(steps)) + "</div>", unsafe_allow_html=True)
 
     keys = M.DAY_TYPES
     st.session_state.setdefault("day_type", "cloudy")
@@ -65,9 +95,10 @@ def render(ctx):
              T(f"início → fim do dia · autonomia {num(m['autonomy'])} h", f"start → end of day · autonomy {num(m['autonomy'])} h"),
              C["bat"])
     with c[3]:
-        card(T("Energia desperdiçada", "Energy wasted"), f"{num(m['waste'])} %",
-             T("excedente sem onde guardar (eficiência)", "surplus with nowhere to store (efficiency)"), C["solar"])
+        card(T("Excedente solar", "Solar surplus"), f"{num(m['waste'])} %",
+             T("bateria cheia: livre para novos usos de dia", "battery full: free for new daytime uses"), C["solar"])
     _verdict_box(v, m["risk"], m["hours"])
+    _plain(o, m)
 
     st.plotly_chart(charts.balance24(o, T("Balanço de 24 horas: oferta × procura", "24-hour balance: supply × demand")),
                     width="stretch")

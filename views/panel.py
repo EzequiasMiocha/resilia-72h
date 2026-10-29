@@ -27,6 +27,15 @@ def get_long_term(village: tuple, version: int = 3):
     return M.long_term(res, get_demand(village)["total"].values)
 
 
+@st.cache_data(show_spinner=False)
+def get_year(village: tuple, pv: float, bat: float):
+    """Energia de um sistema ao longo de 11 anos (média por ano) e indicadores de energia limpa."""
+    res, _ = get_resource()
+    s = M.System(pv=pv, bat=bat)
+    f = M.year_flows(res, get_demand(village)["total"].values, s)
+    return f, M.impact(s, f["served"])
+
+
 def presets(village: tuple):
     tab = get_long_term(village)
     return M.choose(tab, M.LEVELS["recommended"])

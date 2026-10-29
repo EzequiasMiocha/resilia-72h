@@ -8,7 +8,7 @@ from ui import charts
 from ui.i18n import T, day_label, num, verdict_txt
 from ui.style import C, card, explain, page_header
 
-from .panel import get_long_term
+from .panel import get_long_term, get_year
 
 LEVEL_TXT = {"basic": ("Básico", "Basic"), "recommended": ("Recomendado", "Recommended"), "maximum": ("Máximo", "Maximum")}
 VCOL = {"ok": "#16A34A", "partial": "#B45309", "fragile": C["red"]}
@@ -40,6 +40,10 @@ def render(ctx):
                  f"(> 10 % missing) and {num(L['autonomy'])} h of battery autonomy."))
 
     tab = get_long_term(ctx.village)
+
+    def _imp(x):
+        return get_year(ctx.village, float(x["pv"]), float(x["bat"]))[1]
+
     ch = M.choose(tab, L)
     e, r = ch["efficient"], ch["resilient"]
     if not ch["feasible"]:
@@ -71,7 +75,9 @@ def render(ctx):
         (T("Dias maus por ano (> 10 % em falta)", "Bad days per year (> 10 % missing)"), lambda x: num(x["bad_days"], 1)),
         (T("Horas com interrupção por ano", "Hours with interruption per year"), lambda x: f"{num(x['hours'])} h"),
         (T("Autonomia da bateria", "Battery autonomy"), lambda x: f"{num(x['autonomy'])} h"),
-        (T("Energia solar desperdiçada", "Solar energy wasted"), lambda x: f"{num(x['waste'])} %"),
+        (T("Excedente solar (livre para novos usos)", "Solar surplus (free for new uses)"), lambda x: f"{num(x['waste'])} %"),
+        (T("Custo da energia em 20 anos", "Energy cost over 20 years"), lambda x: f"{num(_imp(x)['lcoe'], 2)} USD/kWh"),
+        (T("CO₂ evitado face ao gasóleo", "CO₂ avoided vs diesel"), lambda x: f"{num(_imp(x)['co2_t'])} t/{T('ano', 'yr')}"),
     ]
     st.table(pd.DataFrame({T("Só eficiência", "Efficiency only"): [f(e) for _, f in rows],
                            T("Resiliente (recomendado)", "Resilient (recommended)"): [f(r) for _, f in rows]},

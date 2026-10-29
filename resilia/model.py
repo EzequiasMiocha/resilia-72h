@@ -30,6 +30,15 @@ ETA = 0.95           # eficiência de carga e de descarga da bateria
 SOC_MIN = 0.20       # a bateria nunca desce abaixo de 20 % (protege a vida útil)
 C_RATE = 0.5         # potência máxima da bateria = 0,5 × capacidade
 COST = dict(pv=650.0, bat=320.0)   # USD por kWp / kWh (indicativo, mini-redes em África)
+PANEL_W = 550        # potência de um painel solar comercial (W)
+PANEL_M2 = 2.6       # área de um painel de 550 W (m²)
+
+# comparação com a alternativa habitual: um gerador a gasóleo
+DIESEL_L_KWH = 0.30  # litros de gasóleo por kWh num gerador pequeno
+CO2_KG_L = 2.68      # kg de CO₂ por litro de gasóleo queimado
+DIESEL_USD_L = 1.45  # preço indicativo do gasóleo em Moçambique (USD/l)
+LIFE = 20            # vida do projecto (anos); baterias trocadas uma vez, a meio
+OM = 0.015           # operação e manutenção por ano (fracção do investimento)
 
 
 # ───────────────────────────── dados ─────────────────────────────
@@ -254,6 +263,41 @@ def choose(table: pd.DataFrame, level: dict) -> dict:
     ok = table[(table.risk <= level["risk"]) & (table.bad_days <= level["bad"]) & (table.autonomy >= level["autonomy"])]
     res = ok.sort_values(["cost", "waste"]).iloc[0] if len(ok) else table.sort_values(["bad_days", "cost"]).iloc[0]
     return dict(efficient=eff, resilient=res, feasible=len(ok) > 0)
+
+
+# ───────────────────────────── energia renovável num ano ─────────────────────────────
+def year_flows(res: pd.DataFrame, dem: np.ndarray, s: System) -> dict:
+    """Para onde vai a energia solar: média por ano em 11 anos reais (kWh/ano), e médias mensais (kWh/dia)."""
+    o = simulate(res, dem, s, soc0=0.6)
+    yrs = len(o) / 8760.0
+    f = dict(
+        pv=o["pv"].sum() / yrs, direct=o["direct"].sum() / yrs, bat_in=o["bat_ch"].sum() / yrs,
+        bat_out=o["bat_dis"].sum() / yrs, curt=o["curt"].sum() / yrs, unmet=o["unmet"].sum() / yrs,
+        demand=o["demand"].sum() / yrs,
+    )
+    f["bat_loss"] = max(f["bat_in"] - f["bat_out"], 0.0)
+    f["served"] = f["direct"] + f["bat_out"]
+    days = o.index.normalize()
+    daily = pd.DataFrame({"pv": o["pv"], "demand": o["demand"], "unmet": o["unmet"]}).groupby(days).sum()
+    f["monthly"] = daily.groupby(daily.index.month).mean()
+    return f
+
+
+def impact(s: System, served_kwh_year: float) -> dict:
+    """Indicadores de energia limpa e de custo, face a um gerador a gasóleo."""
+    capex = s.pv * COST["pv"] + s.bat * COST["bat"]
+    life_cost = capex + s.bat * COST["bat"] + OM * capex * LIFE          # + troca de baterias + manutenção
+    diesel_l = served_kwh_year * DIESEL_L_KWH
+    return dict(
+        capex=capex,
+        panels=int(round(s.pv * 1000 / PANEL_W)),
+        area=s.pv * 1000 / PANEL_W * PANEL_M2,
+        lcoe=life_cost / max(served_kwh_year * LIFE, 1e-9),             # USD por kWh servido (sem juros)
+        diesel_l=diesel_l,
+        diesel_usd=diesel_l * DIESEL_USD_L,
+        co2_t=diesel_l * CO2_KG_L / 1000,
+        co2_life_t=diesel_l * CO2_KG_L / 1000 * LIFE,
+    )
 
 
 def simulate_day(res: pd.DataFrame, dem: np.ndarray, s: System, day: pd.Timestamp, warmup_days: int = 7):
