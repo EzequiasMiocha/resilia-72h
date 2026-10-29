@@ -6,7 +6,7 @@ import streamlit as st
 
 from resilia import model as M
 from ui import charts
-from ui.i18n import T, day_label, num, verdict_txt
+from ui.i18n import T, cut_txt, day_label, num, verdict_txt
 from ui.style import C, card, explain, page_header
 
 VCOL = {"ok": "#16A34A", "partial": "#B45309", "fragile": C["red"]}
@@ -106,17 +106,19 @@ def render(ctx):
 
     # teste de resiliência: o mesmo sistema nos 5 tipos de dia
     st.markdown(f"### {T('Teste de resiliência em 24 horas', '24-hour resilience test')}")
-    st.caption(T("O mesmo sistema, testado nos 5 tipos de dia reais. Um sistema resiliente passa em todos.",
-                 "The same system, tested on the 5 real day types. A resilient system passes them all."))
+    st.caption(T("O mesmo sistema, testado nos 5 tipos de dia reais. «Sem cortes» = a aldeia teve luz nas 24 horas. "
+                 "Um sistema resiliente não tem cortes em nenhum.",
+                 "The same system, tested on the 5 real day types. “No cuts” = the village had power for all 24 hours. "
+                 "A resilient system has no cuts on any of them."))
     cells = ""
     for kk in keys:
         oo = M.simulate_day(res, D, s, ctx.days[kk])
         mm = M.day_metrics(oo, s)
         vv = M.verdict(mm["risk"])
-        cells += (f'<div class="k" style="border-top:4px solid {VCOL[vv]}"><div class="u"><b>{day_label(kk)}</b></div>'
-                  f'<div class="n" style="color:{VCOL[vv]};font-size:26px">{num(mm["risk"], 1)} %</div>'
-                  f'<div class="u">{T("em falta", "missing")} · {mm["hours"]} h</div>'
-                  f'<div class="u" style="color:{VCOL[vv]};font-weight:700">{verdict_txt(vv)}</div></div>')
+        col = "#16A34A" if mm["hours"] == 0 else ("#B45309" if vv != "fragile" else C["red"])
+        cells += (f'<div class="k" style="border-top:4px solid {col}"><div class="u"><b>{day_label(kk)}</b></div>'
+                  f'<div class="n" style="color:{col};font-size:24px">{cut_txt(mm["hours"])}</div>'
+                  f'<div class="u">{T("energia em falta", "energy missing")}: {num(mm["risk"], 1)} %</div></div>')
     st.markdown(f'<div class="big" style="grid-template-columns:repeat(5,1fr)">{cells}</div>', unsafe_allow_html=True)
 
     st.plotly_chart(charts.demand_profile(ctx.dem.loc[o.index], T("A procura neste dia, por serviço",

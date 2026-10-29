@@ -5,7 +5,7 @@ import streamlit as st
 
 from resilia import model as M
 from ui import charts
-from ui.i18n import T, day_label, num, verdict_txt
+from ui.i18n import T, cut_txt, day_label, num
 from ui.style import C, card, explain, page_header
 
 from .panel import get_long_term, get_year
@@ -106,11 +106,12 @@ def render(ctx):
             for sysrow in (e, r):
                 s = M.System(pv=sysrow["pv"], bat=sysrow["bat"])
                 mm = M.day_metrics(M.simulate_day(res, D, s, ctx.days[k]), s)
-                vals.append(f"{num(mm['risk'], 1)} % · {verdict_txt(M.verdict(mm['risk']))}")
+                vals.append(cut_txt(mm["hours"]))
             rows2.append((day_label(k), *vals))
         st.table(pd.DataFrame(rows2, columns=[T("Tipo de dia", "Day type"), T("Só eficiência", "Efficiency only"),
                                               T("Resiliente", "Resilient")]).set_index(T("Tipo de dia", "Day type")))
-        st.caption(T("Percentagem de energia em falta em cada dia.", "Percentage of energy missing on each day."))
+        st.caption(T("«Sem cortes» = a aldeia teve luz nas 24 horas desse dia.",
+                     "“No cuts” = the village had power for all 24 hours of that day."))
 
     with st.expander(T("Pressupostos e dados", "Assumptions and data"), icon=":material/info:"):
         st.markdown(T(f"""

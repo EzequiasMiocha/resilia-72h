@@ -49,6 +49,11 @@ def day_label(k: str) -> str:
     return T(*DAY_LABELS[k])
 
 
+def cut_txt(hours: int) -> str:
+    """Resultado de um dia em palavras: «sem cortes» ou «N h sem luz»."""
+    return T("sem cortes", "no cuts") if hours == 0 else T(f"{hours} h sem luz", f"{hours} h without power")
+
+
 def verdict_txt(v: str) -> str:
     return {"ok": T("RESILIENTE", "RESILIENT"), "partial": T("PARCIALMENTE RESILIENTE", "PARTIALLY RESILIENT"),
             "fragile": T("FRÁGIL", "FRAGILE")}[v]

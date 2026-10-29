@@ -10,7 +10,7 @@ import streamlit.components.v1 as components
 
 from resilia import model as M
 from ui import charts
-from ui.i18n import T, day_label, num, verdict_txt
+from ui.i18n import T, cut_txt, day_label, num, verdict_txt
 from ui.icons import icon
 from ui.style import C
 
@@ -114,6 +114,11 @@ def _slide(n, inner, cls="slide"):
 
 def _idea(ic, h, x):
     return f'<div class="idea"><div class="ic">{icon(ic, 30)}</div><div class="h">{h}</div><div class="x">{x}</div></div>'
+
+
+def hcol(m):
+    """Verde = sem cortes; laranja = cortes curtos; vermelho = muitas horas sem luz."""
+    return "#16A34A" if m["hours"] == 0 else (C["red"] if M.verdict(m["risk"]) == "fragile" else "#B45309")
 
 
 def _sys(row):
@@ -230,8 +235,10 @@ def s_balanco(d):
         v = M.verdict(m["risk"])
         with col:
             st.markdown(f"<div style='font-size:15px;font-weight:800'>{name} · <span style='color:#6B7280;font-weight:600'>{_sys(row)}</span></div>"
-                        f"<div style='font-size:22px;font-weight:800;color:{VCOL[v]}'>{num(m['risk'], 1)} % "
-                        f"{T('em falta', 'missing')} · {m['hours']} h · {verdict_txt(v)}</div>", unsafe_allow_html=True)
+                        f"<div style='font-size:22px;font-weight:800;color:{hcol(m)}'>"
+                        f"{cut_txt(m['hours']).capitalize()} · {verdict_txt(v)}"
+                        f"<span style='font-size:14px;color:#6B7280;font-weight:600'> &nbsp;({T('energia em falta', 'energy missing')}: {num(m['risk'], 1)} %)</span></div>",
+                        unsafe_allow_html=True)
             st.plotly_chart(charts.balance24(o, None, ymax=peak, height=340, legend=False), width="stretch")
     st.markdown(f'<div class="lead" style="font-size:15px">{T("Amarelo = sol · azul = bateria · <b>preto = sem energia</b> · linha escura = procura · linha vermelha pontilhada = carga da bateria (escala da direita).", "Yellow = solar · blue = battery · <b>black = no power</b> · dark line = demand · dotted red line = battery charge (right scale).")}</div>',
                 unsafe_allow_html=True)
@@ -250,10 +257,9 @@ def s_resiliente(d):
     cells = ""
     for k in M.DAY_TYPES:
         a, b = d["test"]["e"][k], d["test"]["r"][k]
-        va, vb = M.verdict(a["risk"]), M.verdict(b["risk"])
         cells += (f'<div class="k"><div class="u"><b>{day_label(k)}</b></div>'
-                  f'<div class="u" style="color:{VCOL[va]};font-weight:700">{T("Só eficiência", "Efficiency")}: {num(a["risk"], 1)} %</div>'
-                  f'<div class="u" style="color:{VCOL[vb]};font-weight:800">{T("Resiliente", "Resilient")}: {num(b["risk"], 1)} %</div></div>')
+                  f'<div class="u" style="color:{hcol(a)};font-weight:700">{T("Só eficiência", "Efficiency")}: {cut_txt(a["hours"])}</div>'
+                  f'<div class="u" style="color:{hcol(b)};font-weight:800">{T("Resiliente", "Resilient")}: {cut_txt(b["hours"])}</div></div>')
     _slide(f"5 · {_title(4)}", f"""
 <h2>{T("Testado em dias reais: resiliente e eficiente.", "Tested on real days: resilient and efficient.")}</h2>
 <div class="big">
@@ -269,8 +275,8 @@ def s_resiliente(d):
 </div>
 <div class="lead" style="font-size:16px"><b>{T("Só eficiência", "Efficiency only")}:</b> {_sys(e)} &nbsp;·&nbsp;
 <b class="red">{T("Resiliente", "Resilient")}:</b> {_sys(r)}</div>
-<div style="font-size:18px;font-weight:800;margin:16px 0 4px 0">{T("Teste de 24 horas nos 5 tipos de dia (energia em falta)",
- "24-hour test on the 5 day types (energy missing)")}</div>
+<div style="font-size:18px;font-weight:800;margin:16px 0 4px 0">{T("Teste de 24 horas: a aldeia ficou sem luz em algum momento do dia?",
+ "24-hour test: did the village lose power at any point in the day?")}</div>
 <div class="big" style="grid-template-columns:repeat(5,1fr);margin-top:6px">{cells}</div>""")
 
 
