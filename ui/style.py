@@ -151,6 +151,28 @@ p, li{color:#1F2933;}
 .idea .h{font-size:20px; font-weight:800; margin:8px 0 6px 0; color:#1F2933;}
 .idea .x{font-size:15.5px; color:#4B5563; line-height:1.5;}
 
+/* diapositivo «desafio e objectivo» */
+.two{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:14px;}
+@media (max-width:900px){.two{grid-template-columns:1fr;}}
+.box{border:1px solid #E6E8EC; border-radius:18px; padding:20px 22px; background:#F5F6F8;}
+.box.goal{background:#FFFFFF; border:2px solid #C8102E;}
+.box .tt{font-size:13px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#6B7280; margin-bottom:10px;}
+.box.goal .tt{color:#C8102E;}
+.box .row{display:flex; gap:12px; padding:9px 0; border-top:1px solid #E6E8EC; font-size:16.5px; line-height:1.45; color:#1F2933;}
+.box .row:first-of-type{border-top:none;}
+.box .row .l{flex:0 0 112px; font-weight:800; color:#C8102E;}
+.box .say{font-size:19px; line-height:1.5; color:#1F2933;}
+.box ul{margin:10px 0 0 0; padding-left:20px; font-size:16px; line-height:1.55; color:#374151;}
+
+/* tabela desafio → ferramenta */
+.map{width:100%; border-collapse:separate; border-spacing:0; margin-top:14px; font-size:16.5px;}
+.map th{text-align:left; font-size:12.5px; letter-spacing:.1em; text-transform:uppercase; color:#6B7280; padding:8px 14px;
+        border-bottom:2px solid #C8102E;}
+.map td{padding:12px 14px; border-bottom:1px solid #E6E8EC; vertical-align:top; line-height:1.45; color:#1F2933;}
+.map td:first-child{font-weight:800; width:34%;}
+.map td .w{font-size:13px; color:#6B7280; font-weight:600; display:block; margin-top:2px;}
+.map tr:hover td{background:#FAFAFB;}
+
 .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
 @media (max-width:900px){.duo{grid-template-columns:1fr;}}
 .side{border-radius:18px; padding:16px 18px; border:2px solid #E6E8EC; background:#FFFFFF;}

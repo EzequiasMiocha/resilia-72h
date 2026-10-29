@@ -1,4 +1,5 @@
-"""Apresentação ao júri: directa, 6 diapositivos (contexto, objectivo, como funciona, 24 h, resiliente e eficiente, conclusão)."""
+"""Apresentação ao júri: directa, 6 diapositivos (contexto, desafio e objectivo, como respondemos, 24 h,
+resiliente e eficiente, conclusão)."""
 from __future__ import annotations
 
 import time
@@ -19,23 +20,28 @@ VILLAGE = (200, True, True, True, True, 0.0)       # aldeia de referência da ap
 VCOL = {"ok": "#16A34A", "partial": "#B45309", "fragile": C["red"]}
 
 SLIDES = [
-    ("contexto", "Contexto", "Context", 50,
-     "Mabote, aldeia sem rede eléctrica. A energia vem do sol, mas o sol muda todos os dias. Mostrem os números dos dias fracos.",
-     "Mabote, a village without grid power. Energy comes from the sun, but the sun changes every day. Show the weak-day numbers."),
-    ("objectivo", "Objectivo", "Objective", 50,
-     "Leiam o objectivo e mostrem que respondemos ao desafio: entradas, saídas e o diferencial (resiliência, não só eficiência).",
-     "Read the objective and show we answer the challenge: inputs, outputs and the twist (resilience, not just efficiency)."),
-    ("como", "Como funciona", "How it works", 40,
-     "Entradas → balanço hora a hora → resultados → dimensionamento com 11 anos de dados reais.",
-     "Inputs → hour-by-hour balance → results → sizing with 11 years of real data."),
-    ("balanco", "Balanço 24 h", "24-h balance", 100,
+    ("contexto", "Contexto", "Context", 45,
+     "Onde estamos (Mabote, sem rede), qual é o problema (o sol muda todos os dias) e o que acontece se o sistema for "
+     "pensado só para o dia médio (a aldeia fica às escuras). Mostrem os números.",
+     "Where we are (Mabote, no grid), the problem (the sun changes every day) and what happens if the system is designed "
+     "only for the average day (the village goes dark). Show the numbers."),
+    ("objectivo", "Desafio e objectivo", "Challenge and objective", 60,
+     "À esquerda, o desafio do EMERGE em três linhas. À direita, o nosso objectivo numa frase. Expliquem porque o "
+     "sistema é só solar: o vento de Mabote é fraco para gerar energia.",
+     "Left: the EMERGE challenge in three lines. Right: our objective in one sentence. Explain why the system is solar "
+     "only: Mabote's wind is too weak to generate power."),
+    ("como", "Como respondemos", "How we answer", 45,
+     "Cada exigência do desafio e onde está na plataforma. Terminem com a regra do balanço de cada hora.",
+     "Each requirement of the challenge and where it is in the platform. End with the hourly balance rule."),
+    ("balanco", "Balanço 24 h", "24-h balance", 90,
      "Mudem o tipo de dia. À esquerda o sistema só eficiente, à direita o resiliente. Mostrem a parte preta (energia em falta).",
      "Change the type of day. Left: efficiency-only system; right: resilient. Point to the black part (energy missing)."),
     ("resiliente", "Resiliente e eficiente", "Resilient and efficient", 80,
      "Os números de 11 anos: dias maus por ano e horas sem energia. Depois o teste nos 5 tipos de dia.",
      "The 11-year numbers: bad days per year and hours without power. Then the test on the 5 day types."),
     ("conclusao", "Conclusão", "Conclusion", 40,
-     "O que entregamos e o próximo passo. Frase final.", "What we deliver and the next step. Closing line."),
+     "O que entregamos, o resultado, como se mantém e se replica, e o próximo passo. Frase final.",
+     "What we deliver, the result, how it is sustained and replicated, and the next step. Closing line."),
 ]
 ENDS = list(np.cumsum([s[3] for s in SLIDES]))
 
@@ -45,7 +51,7 @@ def _title(k):
 
 
 @st.cache_data(show_spinner=False)
-def pitch_data(version=1):
+def pitch_data(version=2):
     res, days = get_resource()
     D = get_demand(VILLAGE)["total"].values
     ch = presets(VILLAGE)
@@ -64,7 +70,7 @@ def pitch_data(version=1):
         test[name] = {k: M.day_metrics(M.simulate_day(res, D, s, days[k]), s) for k in M.DAY_TYPES}
     return dict(e=e, r=r, weak_per_year=weak.sum() / (len(daily) / 365.25), weak_run=best,
                 dem_mean=dd.mean(), dem_min=dd.quantile(0.02), dem_max=dd.quantile(0.98), test=test,
-                sun_min=daily.quantile(0.02) / 1000, sun_max=daily.quantile(0.98) / 1000)
+                sun_min=daily.quantile(0.02) / 1000, sun_max=daily.quantile(0.98) / 1000, wind_mean=res["v"].mean())
 
 
 def _go(i):
@@ -118,13 +124,17 @@ def s_contexto(d):
     _slide(f"1 · {_title(0)}", f"""
 <h1>{T("Energia solar numa aldeia sem rede:", "Solar power in a village without the grid:")}<br>
 <span class="red">{T("o sol não é igual todos os dias.", "the sun is not the same every day.")}</span></h1>
-<div class="lead">{T(
- "Em <b>Mabote, Inhambane</b>, a rede eléctrica nacional não chega à maioria das aldeias. A solução é uma <b>mini-rede "
- "solar com baterias</b>. Mas os dias nublados, de chuva ou de calor mudam a energia disponível, e a procura também muda. "
- "Se o sistema for pensado só para o dia médio, a aldeia fica às escuras nos dias maus.",
- "In <b>Mabote, Inhambane</b>, the national grid does not reach most villages. The answer is a <b>solar mini-grid with "
- "batteries</b>. But cloudy, rainy or hot days change the energy available, and demand changes too. If the system is "
- "designed only for the average day, the village goes dark on bad days.")}</div>
+<div class="ideas" style="margin-top:8px">
+ {_idea("globe", T("Onde", "Where"), T(
+   "<b>Mabote, Inhambane.</b> A rede eléctrica nacional não chega à maioria das aldeias. A solução é uma <b>mini-rede solar com baterias</b>.",
+   "<b>Mabote, Inhambane.</b> The national grid does not reach most villages. The answer is a <b>solar mini-grid with batteries</b>."))}
+ {_idea("cloud", T("O problema", "The problem"), T(
+   "Dias nublados, de chuva ou de calor reduzem a energia do sol. E a procura da aldeia também muda de hora para hora e de dia para dia.",
+   "Cloudy, rainy or hot days cut solar energy. And village demand also changes hour by hour and day by day."))}
+ {_idea("alert", T("A consequência", "The consequence"), T(
+   "Um sistema pensado só para o <b>dia médio</b> é barato, mas nos <b>dias maus</b> a aldeia, o centro de saúde e a bomba de água ficam sem energia.",
+   "A system designed only for the <b>average day</b> is cheap, but on <b>bad days</b> the village, the health centre and the water pump lose power."))}
+</div>
 <div class="big">
   <div class="k"><div class="n red">{num(d['weak_per_year'])}</div><div class="u">{T("dias por ano com menos de metade do sol normal",
    "days per year with less than half the normal sunshine")}</div></div>
@@ -140,46 +150,65 @@ def s_contexto(d):
 
 
 def s_objectivo(d):
+    rows = [
+        (T("Tarefa", "Task"), T("Simular como um sistema off-grid equilibra a oferta e a procura ao longo de <b>24 horas</b>.",
+                                "Simulate how an off-grid system balances supply and demand over <b>24 hours</b>.")),
+        (T("Entregável", "Deliverable"), T("Ferramenta simples. <b>Entradas:</b> sol, vento, bateria e perfil de procura. "
+                                           "<b>Saídas:</b> balanço energético e risco de interrupção.",
+                                           "A simple tool. <b>Inputs:</b> solar, wind, battery and demand profile. "
+                                           "<b>Outputs:</b> energy balance and interruption risk.")),
+        (T("Diferencial", "Twist"), T("Optimizar para a <b>resiliência</b>, não apenas para a eficiência.",
+                                      "Optimise for <b>resilience</b>, not just efficiency.")),
+    ]
+    left = "".join(f'<div class="row"><div class="l">{a}</div><div>{b}</div></div>' for a, b in rows)
     _slide(f"2 · {_title(1)}", f"""
-<h2>{T("Uma ferramenta simples para planear uma mini-rede solar resiliente e eficiente.",
-       "A simple tool to plan a resilient and efficient solar mini-grid.")}</h2>
-<div class="lead">{T(
- "<b>Objectivo:</b> mostrar como um sistema off-grid (painéis solares + bateria) equilibra a oferta e a procura ao longo de "
- "<b>24 horas</b>, medir o <b>risco de interrupção</b> e escolher o sistema que <b>aguenta os dias maus</b> sem gastar mais do que o necessário.",
- "<b>Objective:</b> show how an off-grid system (solar panels + battery) balances supply and demand over <b>24 hours</b>, "
- "measure the <b>interruption risk</b> and choose the system that <b>withstands bad days</b> without spending more than needed.")}</div>
-<div class="ideas">
- {_idea("sun", T("Entradas", "Inputs"), T("Painéis solares (kWp), baterias (kWh) e a procura da aldeia (número de famílias e serviços).",
-   "Solar panels (kWp), batteries (kWh) and village demand (number of households and services)."))}
- {_idea("battery", T("Saídas", "Outputs"), T("Balanço energético hora a hora, carga da bateria e risco de interrupção (energia em falta e horas sem energia).",
-   "Hour-by-hour energy balance, battery charge and interruption risk (energy missing and hours without power)."))}
- {_idea("shield", T("Diferencial", "The twist"), T("Optimizar para a <b>resiliência</b> e não só para a eficiência: o sistema é testado contra 11 anos de dias reais.",
-   "Optimise for <b>resilience</b>, not just efficiency: the system is tested against 11 years of real days."))}
+<h2>{T("O que nos pediram e o que fazemos.", "What we were asked and what we do.")}</h2>
+<div class="two">
+ <div class="box"><div class="tt">{T("O desafio · EMERGE", "The challenge · EMERGE")}</div>{left}</div>
+ <div class="box goal"><div class="tt">{T("O nosso objectivo", "Our objective")}</div>
+  <div class="say">{T(
+   "Dimensionar a mini-rede <b>solar + bateria</b> de uma aldeia de Mabote para que <b>não fique às escuras nos dias maus</b>, "
+   "gastando apenas o necessário.",
+   "Size the <b>solar + battery</b> mini-grid of a Mabote village so that it <b>does not go dark on bad days</b>, "
+   "spending only what is needed.")}</div>
+  <ul>
+   <li>{T("Dados reais de Mabote, hora a hora, durante 11 anos (2015–2025).",
+          "Real Mabote data, hour by hour, over 11 years (2015–2025).")}</li>
+   <li>{T("Procura calculada a partir do <b>número de famílias</b> e dos serviços.",
+          "Demand calculated from the <b>number of households</b> and services.")}</li>
+   <li>{T("<b>Resiliência obrigatória</b>; entre os sistemas resilientes, escolhe-se o mais barato (eficiência).",
+          "<b>Resilience is required</b>; among resilient systems, the cheapest is chosen (efficiency).")}</li>
+   <li>{T(f"Só solar: o vento médio em Mabote é de {num(d['wind_mean'], 1)} m/s, fraco para gerar energia. Entra apenas porque arrefece os painéis.",
+          f"Solar only: mean wind in Mabote is {num(d['wind_mean'], 1)} m/s, too weak to generate power. It only counts because it cools the panels.")}</li>
+  </ul>
+ </div>
 </div>""")
 
 
 def s_como(d):
-    steps = [
-        (T("1 · Entradas", "1 · Inputs"), T("Painéis solares e baterias instalados; número de famílias e serviços.",
-                                            "Installed solar panels and batteries; number of households and services.")),
-        (T("2 · Dados reais", "2 · Real data"), T("Sol e temperatura de Mabote, hora a hora, 2015–2025.",
-                                                  "Mabote sun and temperature, hour by hour, 2015–2025.")),
-        (T("3 · Balanço de cada hora", "3 · Hourly balance"), T("O sol serve a aldeia; o excedente carrega a bateria; o défice sai da bateria.",
-                                                                 "The sun serves the village; surplus charges the battery; shortfalls come from the battery.")),
-        (T("4 · Resultado", "4 · Result"), T("Energia em falta e horas sem energia: o risco de interrupção.",
-                                             "Energy missing and hours without power: the interruption risk.")),
-        (T("5 · Dimensionamento", "5 · Sizing"), T(f"{M.N_SYSTEMS} sistemas testados em 11 anos: o mais barato que aguenta os dias maus.",
-                                                   f"{M.N_SYSTEMS} systems tested over 11 years: the cheapest that withstands bad days.")),
+    rows = [
+        (T("Entradas", "Inputs"), T("sol, vento, bateria, procura", "solar, wind, battery, demand"),
+         T("Painel lateral: painéis solares (kWp), baterias (kWh), número de famílias e serviços. O sol e o vento reais variam hora a hora.",
+           "Side panel: solar panels (kWp), batteries (kWh), number of households and services. Real sun and wind vary hour by hour.")),
+        (T("Balanço em 24 horas", "24-hour balance"), T("oferta × procura", "supply × demand"),
+         T("<b>Simulador 24 h:</b> hora a hora (00–23 h), em dias reais de sol, nuvens, chuva e calor.",
+           "<b>24-hour simulator:</b> hour by hour (00–23 h), on real sunny, cloudy, rainy and hot days.")),
+        (T("Risco de interrupção", "Interruption risk"), T("saída", "output"),
+         T("Energia em falta (%), horas sem energia e carga da bateria ao longo do dia.",
+           "Energy missing (%), hours without power and battery charge through the day.")),
+        (T("Resiliência, não só eficiência", "Resilience, not just efficiency"), T("diferencial", "twist"),
+         T(f"<b>Dimensionamento:</b> {M.N_SYSTEMS} sistemas testados em 11 anos; o mais barato que aguenta os dias maus.",
+           f"<b>Sizing:</b> {M.N_SYSTEMS} systems tested over 11 years; the cheapest that withstands bad days.")),
+        (T("Modelo em folha de cálculo", "Spreadsheet model"), T("ferramenta simples", "simple tool"),
+         T("A tabela hora a hora exporta para Excel.", "The hourly table exports to Excel.")),
     ]
-    chain = '<div class="chain">' + '<div class="arrow">→</div>'.join(
-        f'<div class="n"><div class="h">{h}</div><div class="x">{x}</div></div>' for h, x in steps) + "</div>"
+    body = "".join(f"<tr><td>{a}<span class='w'>{w}</span></td><td>{b}</td></tr>" for a, w, b in rows)
     _slide(f"3 · {_title(2)}", f"""
-<h2>{T("Como funciona", "How it works")}</h2>{chain}
-<div class="lead" style="margin-top:12px">{T(
- "<b>Eficiente</b> = o mais barato, com pouca energia desperdiçada. <b>Resiliente</b> = continua a servir a aldeia nos dias "
- "nublados, de chuva e de calor. A plataforma encontra o sistema que é as duas coisas ao mesmo tempo.",
- "<b>Efficient</b> = the cheapest, with little energy wasted. <b>Resilient</b> = keeps serving the village on cloudy, rainy "
- "and hot days. The platform finds the system that is both at once.")}</div>""")
+<h2>{T("Como respondemos ao desafio", "How we answer the challenge")}</h2>
+<table class="map"><tr><th>{T("O desafio pede", "The challenge asks for")}</th><th>{T("Na plataforma", "In the platform")}</th></tr>{body}</table>
+<div class="lead" style="margin-top:16px;font-size:18px">{T(
+ "<b>Em cada hora:</b> o sol serve a aldeia → o excedente carrega a bateria → o que falta sai da bateria → o resto é <b class='red'>energia em falta</b>.",
+ "<b>Every hour:</b> the sun serves the village → surplus charges the battery → shortfalls come from the battery → the rest is <b class='red'>energy missing</b>.")}</div>""")
 
 
 def s_balanco(d):
@@ -240,13 +269,16 @@ def s_conclusao(d):
     _slide(f"6 · {_title(5)}", f"""
 <h2>{T("Uma ferramenta simples que diz que sistema instalar para a aldeia não ficar às escuras.",
        "A simple tool that tells you which system to install so the village does not go dark.")}</h2>
-<div class="ideas">
+<div class="ideas" style="grid-template-columns:repeat(auto-fit,minmax(215px,1fr))">
  {_idea("check", T("O que entregamos", "What we deliver"), T(
    "Simulador de 24 h com dados reais, risco de interrupção, e dimensionamento testado em 11 anos.",
    "24-hour simulator with real data, interruption risk, and sizing tested over 11 years."))}
  {_idea("shield", T("Resultado", "Result"), T(
    f"Com +{num(100 * (d['r']['cost'] / d['e']['cost'] - 1))} % de investimento, os dias maus passam de {num(d['e']['bad_days'])} para {num(d['r']['bad_days'], 1)} por ano.",
    f"With +{num(100 * (d['r']['cost'] / d['e']['cost'] - 1))} % investment, bad days fall from {num(d['e']['bad_days'])} to {num(d['r']['bad_days'], 1)} a year."))}
+ {_idea("users", T("Sustentabilidade e replicação", "Sustainability and replication"), T(
+   "Gratuita e de código aberto, para comunidades, ONGs e o FUNAE. Para outra aldeia basta o sol e a temperatura hora a hora e o número de famílias.",
+   "Free and open source, for communities, NGOs and FUNAE. For another village it only needs hourly sun and temperature and the number of households."))}
  {_idea("signal", T("Próximo passo", "Next step"), T(
    "Piloto numa aldeia de Mabote: medir a procura real e confirmar o dimensionamento no terreno.",
    "Pilot in a Mabote village: measure real demand and confirm the sizing in the field."))}
